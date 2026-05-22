@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d0500">
+<title>親子災後保衛營</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100%;background:#0a0400}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;color:#fff}
+.wrap{max-width:430px;margin:0 auto;padding:2.5rem 1.5rem 4rem}
+
+/* Hero */
+.hero{text-align:center;margin-bottom:2.5rem}
+.hero-icon{font-size:3.5rem;display:inline-block;animation:sway 3s ease-in-out infinite;margin-bottom:.75rem}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.hero-badge{font-size:.85rem;color:#FFB238;letter-spacing:.2em;margin-bottom:.5rem}
+.hero-title{font-size:2.6rem;font-weight:900;line-height:1.1;margin-bottom:.5rem;
+  background:linear-gradient(135deg,#fff 30%,#FFB238);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:.95rem;color:#888;letter-spacing:.05em}
+
+/* Sections */
+.section-label{font-size:.75rem;font-weight:700;letter-spacing:.2em;color:#666;margin-bottom:.85rem;padding-left:.25rem}
+
+/* Game cards */
+.game-card{display:flex;align-items:center;gap:1rem;background:#1a1008;border:1.5px solid #2a1a08;
+  border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:.85rem;cursor:pointer;
+  text-decoration:none;color:inherit;transition:transform .12s,border-color .12s}
+.game-card:active{transform:scale(.97)}
+.game-icon{font-size:2.4rem;flex-shrink:0;width:52px;text-align:center}
+.game-info{flex:1;min-width:0}
+.game-title{font-size:1.2rem;font-weight:800;margin-bottom:.2rem}
+.game-desc{font-size:.85rem;color:#888;line-height:1.5}
+.game-arrow{font-size:1.1rem;color:#555;flex-shrink:0}
+
+/* Color accents per game */
+.c-light .game-title{color:#FCD34D} .c-light{border-left:4px solid #FCD34D}
+.c-water .game-title{color:#22D3EE} .c-water{border-left:4px solid #22D3EE}
+.c-fire  .game-title{color:#FB923C} .c-fire {border-left:4px solid #FB923C}
+.c-flash .game-title{color:#FACC15} .c-flash{border-left:4px solid #FACC15}
+.c-wind  .game-title{color:#7DD3FC} .c-wind {border-left:4px solid #7DD3FC}
+.c-earth .game-title{color:#FBBF24} .c-earth{border-left:4px solid #FBBF24}
+
+/* Footer note */
+.footer-note{margin-top:2rem;text-align:center;font-size:.8rem;color:#444;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="hero-icon">⚔️</div>
+    <div class="hero-badge">鬼殺隊 · 試煉</div>
+    <h1 class="hero-title">親子<br>災後保衛營</h1>
+    <p class="hero-sub">六種呼吸法 · 六個生存挑戰</p>
+  </div>
+
+  <div class="section-label">▸ 選擇你的試煉</div>
+
+  <a class="game-card c-light" href="games/light/index.html">
+    <div class="game-icon">🕯</div>
+    <div class="game-info">
+      <div class="game-title">光之呼吸</div>
+      <div class="game-desc">停電了！三種光源，完成三個緊急任務</div>
+    </div>
+    <div class="game-arrow">›</div>
+  </a>
+
+  <a class="game-card c-water" href="games/water/index.html">
+    <div class="game-icon">💧</div>
+    <div class="game-info">
+      <div class="game-title">水之呼吸</div>
+      <div class="game-desc">斷水了！判斷五個水源該怎麼處理</div>
+    </div>
+    <div class="game-arrow">›</div>
+  </a>
+
+  <a class="game-card c-fire" href="games/fire/index.html">
+    <div class="game-icon">🔥</div>
+    <div class="game-info">
+      <div class="game-title">炎之呼吸</div>
+      <div class="game-desc">戰爭爆發！用 $1,000 採購糧食，撐過三天九餐</div>
+    </div>
+    <div class="game-arrow">›</div>
+  </a>
+
+  <a class="game-card c-flash" href="games/flash/index.html">
+    <div class="game-icon">⚡</div>
+    <div class="game-info">
+      <div class="game-title">雷之呼吸</div>
+      <div class="game-desc">停電了！聰明分配電力，撐過關鍵的一天</div>
+    </div>
+    <div class="game-arrow">›</div>
+  </a>
+
+  <a class="game-card c-wind" href="games/wind/index.html">
+    <div class="game-icon">📻</div>
+    <div class="game-info">
+      <div class="game-title">風之呼吸</div>
+      <div class="game-desc">手機變磚頭！學會無線電暗語，傳遞機密情資</div>
+    </div>
+    <div class="game-arrow">›</div>
+  </a>
+
+  <a class="game-card c-earth" href="games/earth/index.html">
+    <div class="game-icon">🏠</div>
+    <div class="game-info">
+      <div class="game-title">土之呼吸</div>
+      <div class="game-desc">緊急狀況！帶著一家四口安全撤離</div>
+    </div>
+    <div class="game-arrow">›</div>
+  </a>
+
+  <div class="footer-note">
+    鬼殺隊訓練營 · 防災知識遊戲化<br>
+    每個遊戲都有正確答案和知識解說
+  </div>
+
+</div>
+</body>
+</html>

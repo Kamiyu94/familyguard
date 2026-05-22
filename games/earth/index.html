@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1208">
+<title>土之呼吸 — 家庭逃生演練</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  #game-screen { padding-top: 148px; padding-bottom: 100px; }
+  .choice-btn { transition: transform .1s; }
+  .choice-btn:active { transform: scale(.97); }
+  .btn-correct { background-color: #15803d !important; border-color: #16a34a !important; }
+  .btn-wrong   { background-color: #991b1b !important; border-color: #dc2626 !important; }
+  .shake { animation: shakeX .4s ease; }
+  @keyframes shakeX {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-8px)} 40%{transform:translateX(8px)}
+    60%{transform:translateX(-5px)} 80%{transform:translateX(5px)}
+  }
+  .pop-in { animation: popIn .35s ease; }
+  @keyframes popIn {
+    0%{transform:scale(.85);opacity:0} 70%{transform:scale(1.04)} 100%{transform:scale(1);opacity:1}
+  }
+</style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+<!-- ══ INTRO ══ -->
+<div id="intro-screen" class="max-w-xl mx-auto flex flex-col items-center justify-center min-h-screen text-center p-6">
+  <div class="text-7xl mb-5" style="animation:sway 3s ease-in-out infinite">🏠</div>
+  <style>@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}</style>
+  <div class="text-sm font-bold text-amber-400 tracking-widest mb-3">鬼殺隊 · 土之試煉</div>
+  <h1 class="text-5xl font-black text-white mb-3">土之呼吸</h1>
+  <p class="text-xl text-gray-400 mb-8">家庭逃生演練</p>
+  <div class="bg-gray-800 p-6 rounded-2xl w-full mb-8 text-left">
+    <p class="text-lg text-gray-300 leading-relaxed mb-5">
+      緊急狀況來了！你要帶著<span class="text-amber-400 font-bold">一家四口</span>安全撤離。每一個決定都關係到家人的安危——選錯了，有人可能會<span class="text-red-400 font-bold">受傷、被困或走散</span>。
+    </p>
+    <div class="grid grid-cols-4 gap-2 text-center text-sm">
+      <div class="bg-gray-900 rounded-xl py-3">
+        <div class="text-2xl mb-1">🧒</div>
+        <div class="text-gray-300 font-bold">你</div>
+      </div>
+      <div class="bg-gray-900 rounded-xl py-3">
+        <div class="text-2xl mb-1">👩</div>
+        <div class="text-gray-300 font-bold">媽媽</div>
+      </div>
+      <div class="bg-gray-900 rounded-xl py-3">
+        <div class="text-2xl mb-1">👨</div>
+        <div class="text-gray-300 font-bold">爸爸</div>
+      </div>
+      <div class="bg-gray-900 rounded-xl py-3">
+        <div class="text-2xl mb-1">👵</div>
+        <div class="text-gray-300 font-bold">奶奶</div>
+      </div>
+    </div>
+  </div>
+  <button onclick="startGame()" class="w-full bg-amber-600 active:bg-amber-700 text-white font-bold py-5 text-2xl rounded-2xl shadow-lg">
+    開始演練 →
+  </button>
+</div>
+
+<!-- ══ GAME ══ -->
+<div id="game-wrap" class="hidden">
+
+  <!-- Fixed Header -->
+  <div id="header" class="fixed top-0 left-0 right-0 z-50 bg-gray-900/96 backdrop-blur border-b border-amber-900/60 max-w-xl mx-auto">
+    <div class="px-4 pt-3 pb-3">
+      <div class="flex items-center justify-between mb-2">
+        <span id="h-round" class="text-amber-400 font-bold text-lg">第 1 關 / 5</span>
+        <span class="text-xl">🏠</span>
+        <span id="h-safe" class="text-green-400 font-bold text-lg">4 人安全</span>
+      </div>
+      <!-- Family status row -->
+      <div id="family-row" class="flex justify-around bg-gray-800/70 rounded-2xl px-1 py-2"></div>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="max-w-xl mx-auto px-4">
+    <div id="screen-scenario"></div>
+    <div id="screen-result" class="hidden py-6"></div>
+  </div>
+
+  <!-- Fixed CTA -->
+  <div class="fixed bottom-0 left-0 right-0 z-50 max-w-xl mx-auto px-4 pb-5 pt-3 bg-gradient-to-t from-gray-900 via-gray-900/95 to-transparent">
+    <button id="cta-btn" onclick="handleCTA()"
+      class="w-full py-4 text-xl font-bold rounded-2xl bg-amber-600 active:bg-amber-700 text-white shadow-lg hidden">
+      下一關 →
+    </button>
+  </div>
+
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────
+const FAMILY = [
+  { id:'you', name:'你',   icon:'🧒' },
+  { id:'mom', name:'媽媽', icon:'👩' },
+  { id:'dad', name:'爸爸', icon:'👨' },
+  { id:'gma', name:'奶奶', icon:'👵' },
+];
+
+const STATUS = {
+  safe:      { label:'安全', color:'text-green-400',  bg:'bg-green-900/30 border-green-800',  icon:'✅' },
+  injured:   { label:'受傷', color:'text-yellow-400', bg:'bg-yellow-900/30 border-yellow-800', icon:'🤕' },
+  trapped:   { label:'被困', color:'text-red-400',    bg:'bg-red-900/30 border-red-800',       icon:'🆘' },
+  separated: { label:'走散', color:'text-orange-400', bg:'bg-orange-900/30 border-orange-800', icon:'❓' },
+};
+
+const SCENARIOS = [
+  {
+    badge: '第1關 · 躲避',
+    icon: '💥',
+    setting: '夜晚，防空警報突然大響！你們一家四口都在客廳，旁邊有一片大落地窗。',
+    question: '你帶全家躲到哪裡？',
+    choices: [
+      {
+        text: '🚪 衝出大門，快點逃跑',
+        correct: false, victim: 'mom', status: 'injured',
+        consequence: '衝向大門的瞬間，衝擊波把落地窗震碎了，媽媽被飛濺的碎玻璃劃傷了手臂。',
+        lesson: '窗邊和門口是最危險的位置！碎玻璃是最常見的受傷原因。',
+      },
+      {
+        text: '🧱 全家蹲低，躲到遠離窗戶的牆角',
+        correct: true, victim: null, status: null,
+        consequence: '',
+        lesson: '牆角遠離玻璃，蹲低可以避開衝擊波。這是最安全的選擇！',
+      },
+      {
+        text: '🛋 躲在客廳沙發後面',
+        correct: false, victim: 'mom', status: 'injured',
+        consequence: '沙發就緊靠著落地窗，玻璃碎裂，碎片噴來，媽媽的臉被劃傷了。',
+        lesson: '沙發通常靠近窗邊——還是危險！一定要選遠離所有玻璃的牆角。',
+      },
+    ],
+  },
+  {
+    badge: '第2關 · 照明',
+    icon: '🌑',
+    setting: '警報解除，但全棟停電，一片漆黑。你需要照明。廚房隱約有一點瓦斯味……',
+    question: '選哪種照明方式？',
+    choices: [
+      {
+        text: '🕯 找蠟燭來點',
+        correct: false, victim: 'dad', status: 'trapped',
+        consequence: '蠟燭的火焰點燃了外洩的瓦斯，廚房突然起火！爸爸衝去拿滅火器，被濃煙困住了。',
+        lesson: '聞到瓦斯味絕對不能用明火！要先關瓦斯開關、開窗通風，然後離開。',
+      },
+      {
+        text: '🔦 拿出防災手電筒',
+        correct: true, victim: null, status: null,
+        consequence: '',
+        lesson: '防災手電筒是緊急包必備！不用明火，安全又耐用。平時就要放在好找的固定位置。',
+      },
+      {
+        text: '📱 用手機手電筒功能',
+        correct: false, victim: null, status: null,
+        consequence: '手機電量很快耗光了。後來需要聯絡家人時完全沒辦法，大家差點走散。',
+        lesson: '停電時手機電量是救命資源！要留給緊急聯絡，不能用來當手電筒。',
+      },
+    ],
+  },
+  {
+    badge: '第3關 · 撤離',
+    icon: '🏃',
+    setting: '廣播通知全棟立刻撤離！你們在6樓，奶奶腳不太方便，走路比較慢。',
+    question: '怎麼下樓離開？',
+    choices: [
+      {
+        text: '🛗 搭電梯，快一點',
+        correct: false, victim: 'gma', status: 'trapped',
+        consequence: '電梯走到3樓，電力完全中斷，電梯就這樣停住了。奶奶被困在電梯裡出不來！',
+        lesson: '緊急撤離時絕對不能搭電梯！停電或火災時電梯隨時會停。',
+      },
+      {
+        text: '🚶 走緊急逃生樓梯',
+        correct: true, victim: null, status: null,
+        consequence: '',
+        lesson: '逃生樓梯永遠是最安全的選擇！現在就去查清楚家附近的逃生梯在哪裡。',
+      },
+      {
+        text: '🪟 從陽台爬外牆下去',
+        correct: false, victim: 'gma', status: 'separated',
+        consequence: '奶奶年紀大了，沒辦法爬外牆。你們先下去，奶奶只能在上面等救援，大家走散了。',
+        lesson: '逃生路線要讓全家每個人都能走！提前確認老人和小孩能不能用。',
+      },
+    ],
+  },
+  {
+    badge: '第4關 · 撤退',
+    icon: '📦',
+    setting: '全家順利到了一樓。這時你突然想到——家裡還有重要證件和現金沒帶走！',
+    question: '你決定怎麼做？',
+    choices: [
+      {
+        text: '📦 快跑回去拿，很快就好',
+        correct: false, victim: 'dad', status: 'trapped',
+        consequence: '爸爸跑回去的時候，突然發生餘震，走廊的牆壁倒塌，爸爸被困在樓上了！',
+        lesson: '撤離後絕對不能再回去拿東西！財物可以再有，安全才是第一位。',
+      },
+      {
+        text: '🏃 直接去集合點，文件以後再說',
+        correct: true, victim: null, status: null,
+        consequence: '',
+        lesson: '生命永遠優先！重要文件平時就要放進防災包，緊急時可以直接帶走。',
+      },
+      {
+        text: '⏳ 在大廳等一下，再決定',
+        correct: false, victim: 'mom', status: 'separated',
+        consequence: '等待期間現場越來越混亂，一陣騷動把媽媽推開，大家走散了，找了很久才找到彼此。',
+        lesson: '緊急狀況不能猶豫！立刻按計畫行動，去事先約好的集合點。',
+      },
+    ],
+  },
+  {
+    badge: '第5關 · 團結',
+    icon: '👵',
+    setting: '快到集合點了！但奶奶走得越來越慢，已經落後一大段。前方路有點複雜。',
+    question: '你怎麼做？',
+    choices: [
+      {
+        text: '🏃 先跑去集合點，叫奶奶跟上來',
+        correct: false, victim: 'gma', status: 'separated',
+        consequence: '奶奶在複雜的路上迷路了，找不到集合點。大家找了好久才找到她。',
+        lesson: '老人和小孩是最需要幫助的人，絕不能讓他們單獨行動！',
+      },
+      {
+        text: '🤝 放慢腳步，扶著奶奶走；請爸爸背她',
+        correct: true, victim: null, status: null,
+        consequence: '',
+        lesson: '全家一起行動，沒有人可以被落下。緊急時刻更要互相照顧！',
+      },
+      {
+        text: '🛑 叫奶奶在原地等，你去找人來接她',
+        correct: false, victim: 'gma', status: 'separated',
+        consequence: '混亂中你找不到回去的路。奶奶在原地等了很久，非常害怕，後來才被救援人員找到。',
+        lesson: '讓老人原地等候在混亂環境中非常危險。要讓家人始終在視線範圍內！',
+      },
+    ],
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+let S = {};
+function initState() {
+  S = { round: 0, answered: false, shuffled: [], family: {} };
+  FAMILY.forEach(m => { S.family[m.id] = 'safe'; });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function countSafe() {
+  return FAMILY.filter(m => S.family[m.id] === 'safe').length;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function adjustPadding() {
+  const h = document.getElementById('header');
+  if (h) document.getElementById('game-screen').style.paddingTop = (h.offsetHeight + 10) + 'px';
+}
+
+// ── Header ────────────────────────────────────────────────────────────────
+function renderHeader() {
+  document.getElementById('h-round').textContent = `第 ${S.round + 1} 關 / ${SCENARIOS.length}`;
+  document.getElementById('h-safe').textContent = countSafe() + ' 人安全';
+
+  document.getElementById('family-row').innerHTML = FAMILY.map(m => {
+    const st = STATUS[S.family[m.id]] || STATUS.safe;
+    return `<div class="flex flex-col items-center gap-0.5 px-2 py-0.5">
+      <span class="text-2xl">${m.icon}</span>
+      <span class="text-xs font-bold ${st.color}">${m.name}</span>
+      <span class="text-xs leading-none">${st.icon}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Render Scenario ───────────────────────────────────────────────────────
+function render() {
+  const sc = SCENARIOS[S.round];
+  S.answered = false;
+  S.shuffled = shuffle(sc.choices.map((c, i) => ({ ...c, origIdx: i })));
+  renderHeader();
+  document.getElementById('cta-btn').classList.add('hidden');
+
+  const choicesHtml = S.shuffled.map((c, i) =>
+    `<button id="ch-${i}" onclick="pick(${i})"
+      class="choice-btn w-full text-left px-5 py-4 rounded-2xl border-2 border-gray-600 bg-gray-800
+             text-white text-lg font-medium mb-3 leading-snug">
+      ${c.text}
+    </button>`
+  ).join('');
+
+  document.getElementById('screen-scenario').innerHTML = `
+    <div class="pop-in">
+      <div class="flex items-center gap-3 mb-4 mt-2">
+        <span class="text-4xl">${sc.icon}</span>
+        <span class="text-xs font-bold bg-amber-900/50 text-amber-300 px-3 py-1.5 rounded-full tracking-wide">${sc.badge}</span>
+      </div>
+      <div class="bg-gray-800 border border-amber-900/40 rounded-2xl px-5 py-4 mb-5">
+        <p class="text-gray-200 text-base leading-relaxed">${sc.setting}</p>
+      </div>
+      <p class="text-gray-400 text-sm mb-3 text-center font-semibold">${sc.question}</p>
+      <div>${choicesHtml}</div>
+      <div id="feedback" class="hidden mt-3 rounded-2xl px-5 py-4 text-base leading-relaxed"></div>
+    </div>`;
+
+  adjustPadding();
+}
+
+function pick(idx) {
+  if (S.answered) return;
+  S.answered = true;
+
+  const c = S.shuffled[idx];
+  const btn = document.getElementById(`ch-${idx}`);
+  const fb  = document.getElementById('feedback');
+
+  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = true; });
+
+  if (c.correct) {
+    btn.classList.add('btn-correct');
+    fb.classList.remove('hidden');
+    fb.className = 'mt-3 rounded-2xl px-5 py-4 text-base leading-relaxed bg-green-900/50 text-green-300 border border-green-700';
+    fb.innerHTML = `<span class="font-bold">✅ 答對了！</span> ${c.lesson}`;
+  } else {
+    btn.classList.add('btn-wrong', 'shake');
+    setTimeout(() => btn.classList.remove('shake'), 400);
+
+    // Apply victim status (only if currently safe)
+    if (c.victim && c.status && S.family[c.victim] === 'safe') {
+      S.family[c.victim] = c.status;
+    }
+    renderHeader();
+
+    const victimMember = c.victim ? FAMILY.find(m => m.id === c.victim) : null;
+    const stInfo = c.status ? STATUS[c.status] : null;
+    const victimTag = victimMember && stInfo
+      ? `<div class="mt-3 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold border ${stInfo.bg} ${stInfo.color}">
+           ${victimMember.icon} ${victimMember.name} ${stInfo.icon} ${stInfo.label}
+         </div>`
+      : '';
+
+    fb.classList.remove('hidden');
+    fb.className = 'mt-3 rounded-2xl px-5 py-4 text-base leading-relaxed bg-red-900/40 border border-red-900';
+    fb.innerHTML = `<p class="text-red-300 font-bold mb-2">❌ ${c.consequence}</p>
+      ${victimTag}
+      <p class="text-gray-400 text-sm mt-3 leading-relaxed">💡 ${c.lesson}</p>`;
+  }
+
+  const cta = document.getElementById('cta-btn');
+  cta.classList.remove('hidden');
+  cta.textContent = S.round < SCENARIOS.length - 1 ? '下一關 →' : '看結果 🎉';
+}
+
+function handleCTA() {
+  S.round++;
+  if (S.round >= SCENARIOS.length) {
+    showResult();
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    render();
+  }
+}
+
+// ── Result ────────────────────────────────────────────────────────────────
+function showResult() {
+  document.getElementById('screen-scenario').classList.add('hidden');
+  document.getElementById('cta-btn').classList.add('hidden');
+  document.getElementById('h-round').textContent = '演練結束';
+  renderHeader();
+
+  const safe = countSafe();
+  const configs = [
+    { n:4, emoji:'🏆', title:'完美逃生！',    msg:'太厲害了！所有家人都安全撤離！你是最棒的守護者！' },
+    { n:3, emoji:'🌟', title:'3 人安全撤離',  msg:'做得很好！只有一個地方判斷失誤，再練習一次就能完美！' },
+    { n:2, emoji:'😰', title:'2 人安全撤離',  msg:'有幾個重要決定需要加強，再把每關的提示讀一遍！' },
+    { n:1, emoji:'😨', title:'1 人安全撤離',  msg:'緊急逃生知識還需要多練習，把錯誤的地方都記起來！' },
+    { n:0, emoji:'😢', title:'大家都走散了',  msg:'沒關係！這次學到的，下次就會做得更好！' },
+  ];
+  const cfg = configs.find(c => c.n === safe) || configs[configs.length-1];
+
+  const familyCards = FAMILY.map(m => {
+    const st = STATUS[S.family[m.id]] || STATUS.safe;
+    return `<div class="flex items-center gap-3 p-3 rounded-xl border ${st.bg}">
+      <span class="text-3xl">${m.icon}</span>
+      <div>
+        <div class="font-bold ${st.color}">${m.name}</div>
+        <div class="text-sm text-gray-400">${st.icon} ${st.label}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const anyAffected = FAMILY.some(m => S.family[m.id] !== 'safe');
+  const rescueNote = anyAffected
+    ? `<div class="bg-blue-900/30 border border-blue-800 rounded-2xl px-4 py-3 mb-5 text-sm text-blue-300 text-center">
+         🚑 走散或被困的家人，後來都被救援隊找到了。大家最終平安。
+       </div>`
+    : '';
+
+  const lessonsHtml = SCENARIOS.map(sc => {
+    const correct = sc.choices.find(c => c.correct);
+    return `<div class="mb-4 pb-4 border-b border-gray-700 last:border-0">
+      <div class="text-amber-400 font-bold text-sm mb-1">${sc.badge}</div>
+      <p class="text-gray-300 text-sm leading-relaxed">${correct.lesson}</p>
+    </div>`;
+  }).join('');
+
+  document.getElementById('screen-result').innerHTML = `
+    <div class="pop-in">
+      <div class="text-center mb-6">
+        <div class="text-6xl mb-3">${cfg.emoji}</div>
+        <h2 class="text-3xl font-black text-amber-400 mb-1">${cfg.title}</h2>
+        <p class="text-2xl font-bold text-white mb-2">${safe} / 4 人安全撤離</p>
+        <p class="text-gray-400">${cfg.msg}</p>
+      </div>
+      ${rescueNote}
+      <div class="grid grid-cols-2 gap-3 mb-6">${familyCards}</div>
+      <div class="bg-gray-800 rounded-2xl p-5 mb-6 border border-amber-900/40">
+        <div class="text-amber-400 font-bold mb-4 text-center">💡 每一關的知識重點</div>
+        ${lessonsHtml}
+      </div>
+      <button onclick="location.reload()" class="w-full py-4 text-xl font-bold rounded-2xl bg-amber-600 active:bg-amber-700 text-white">
+        再玩一次 🔄
+      </button>
+    </div>`;
+
+  document.getElementById('screen-result').classList.remove('hidden');
+  adjustPadding();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+function startGame() {
+  document.getElementById('intro-screen').classList.add('hidden');
+  document.getElementById('game-wrap').classList.remove('hidden');
+  initState();
+  render();
+}
+
+window.addEventListener('load', adjustPadding);
+window.addEventListener('resize', adjustPadding);
+</script>
+</body>
+</html>

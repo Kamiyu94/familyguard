@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雷之呼吸：電力生存挑戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #111827; /* gray-900 */
+            transition: background-color 0.5s ease;
+        }
+        /* 暖氣效果濾鏡 */
+        body.warm-mode::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(255, 160, 60, 0.15) 0%, rgba(255, 140, 0, 0.05) 80%);
+            z-index: 5;
+            mix-blend-mode: screen;
+            animation: warmPulse 4s infinite alternate;
+        }
+
+        @keyframes warmPulse {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        .card-category-high { border-left: 6px solid #EF4444; /* red-500 */ }
+        .card-category-medium { border-left: 6px solid #F59E0B; /* amber-500 */ }
+        .card-category-low { border-left: 6px solid #22C55E; /* green-500 */ }
+
+        .energy-block {
+            transition: all 0.3s ease;
+        }
+        .energy-block.full {
+            background-color: #22C55E; /* green-500 */
+            box-shadow: 0 0 8px 0 #22C55E80;
+        }
+        .energy-block.empty {
+            background-color: #374151; /* gray-700 */
+            border: 1px solid #4B5563; /* gray-600 border for visibility */
+        }
+
+        /* 生存數值條樣式 */
+        .survival-bar-bg {
+            background-color: #374151; /* gray-700 */
+        }
+        .survival-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease-in-out;
+        }
+        .survival-bar-fill.red { background-color: #EF4444; }
+        .survival-bar-fill.yellow { background-color: #F59E0B; }
+        .survival-bar-fill.green { background-color: #22C55E; }
+        .survival-bar-fill.blue { background-color: #3B82F6; }
+        .survival-bar-fill.purple { background-color: #8B5CF6; }
+        .survival-bar-fill.cyan { background-color: #06B6D4; }
+
+        /* 確保浮動標頭和按鈕下的內容不會被遮擋 */
+        #game-screen {
+            padding-top: 250px; 
+            padding-bottom: 140px; 
+        }
+
+        /* 圖片容器樣式 */
+        .story-image {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            border-radius: 0.5rem 0.5rem 0 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        /* 狀態圖示過渡效果 */
+        .status-icon {
+            transition: all 0.3s ease;
+        }
+        
+        /* 無線電波紋動畫 */
+        .radio-wave {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .status-icon.active .radio-wave {
+            opacity: 1;
+            animation: radioPing 1.5s infinite;
+        }
+        @keyframes radioPing {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.3; transform: scale(0.8); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4">
+
+    <div id="app-container" class="max-w-xl mx-auto">
+
+        <!-- 畫面 1: 情境介紹 -->
+        <div id="intro-screen" class="flex flex-col items-center justify-center min-h-[90vh] text-center">
+            <header class="mb-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-yellow-400 mb-4">雷之呼吸：電力生存挑戰</h1>
+                <p class="text-2xl text-gray-300">蓄電池不是無限的！</p>
+            </header>
+            <div class="bg-gray-800 p-6 rounded-lg shadow-2xl w-full">
+                <!-- 開場圖片 -->
+                <img src="images/morning_cold.jpg" 
+                     onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1477601263545-51d103b72cb8?auto=format&fit=crop&w=800&q=80';" 
+                     class="w-full h-56 object-cover rounded-md mb-6 opacity-90" 
+                     alt="寒冷的窗戶">
+                <p class="text-xl font-bold mb-4">(嚴肅地) 試煉開始！</p>
+                <p class="text-lg text-gray-300 mb-4 text-left leading-relaxed">
+                    開戰第七天，寒流來襲，室外 9°C。糧食和水還夠，但已斷電。
+                    幸好，你的蓄電池充飽了 <span class="text-green-400 font-bold">10 格電</span>。
+                </p>
+                <p class="text-lg text-gray-300 mb-8 text-left leading-relaxed">
+                    現在是早上 7:00，你剛起床。
+                    <span class="text-purple-400 block mt-2">你的精神狀態很緊繃 (心情 60%)，任何負面狀況都可能讓你崩潰。</span>
+                </p>
+                <button id="start-button" class="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-5 px-6 rounded-lg text-2xl shadow-lg transition duration-300">
+                    開始挑戰 (起床)
+                </button>
+            </div>
+        </div>
+
+        <!-- 畫面 2: 遊戲主體 -->
+        <div id="game-screen" class="hidden">
+            
+            <!-- 浮動狀態列 (頂部) -->
+            <div id="sticky-header" class="fixed top-0 left-0 right-0 bg-gray-900 shadow-2xl z-20 max-w-xl mx-auto p-4 border-b-2 border-gray-700">
+                <!-- 生存數值顯示 -->
+                <div id="survival-stats" class="grid grid-cols-3 gap-2 mb-3 text-base font-bold">
+                    <div class="flex items-center space-x-1">
+                        <span class="text-red-400 w-12">飽足:</span>
+                        <div class="flex-grow survival-bar-bg rounded-full h-4">
+                            <div id="bar-fullness" class="survival-bar-fill red rounded-full" style="width: 50%;"></div>
+                        </div>
+                        <span id="val-fullness" class="w-10 text-right">50%</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="text-blue-400 w-12">健康:</span>
+                        <div class="flex-grow survival-bar-bg rounded-full h-4">
+                            <div id="bar-health" class="survival-bar-fill blue rounded-full" style="width: 70%;"></div>
+                        </div>
+                        <span id="val-health" class="w-10 text-right">70%</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <span class="text-purple-400 w-12">心情:</span>
+                        <div class="flex-grow survival-bar-bg rounded-full h-4">
+                            <div id="bar-mood" class="survival-bar-fill purple rounded-full" style="width: 60%;"></div>
+                        </div>
+                        <span id="val-mood" class="w-10 text-right">60%</span>
+                    </div>
+                </div>
+
+                <!-- 資源與狀態顯示列 -->
+                <div class="flex gap-2 h-24">
+                    <!-- 蓄電池存量 -->
+                    <div class="bg-gray-800 p-2 rounded-lg shadow-md flex-grow flex flex-col justify-center">
+                        <h2 class="text-sm font-bold mb-1 text-center text-gray-300">蓄電池存量</h2>
+                        <!-- 修改：改回 1x10 單排，使用 grid-cols-10 -->
+                        <div id="energy-display" class="grid grid-cols-10 gap-1 mb-1 h-10 px-1">
+                            <!-- JS 會在這裡生成 10 格電 -->
+                        </div>
+                        <div class="text-center text-lg font-bold leading-none mt-1">
+                            <span id="energy-count" class="text-green-400 text-xl">10</span> <span class="text-xs text-gray-400">/10 格</span>
+                        </div>
+                    </div>
+
+                    <!-- 狀態圖示群組 (右側) -->
+                    <div class="flex gap-1.5 items-center">
+                        <!-- LED 燈狀態 -->
+                        <div id="status-light" class="bg-gray-800 p-1 rounded-lg shadow-md w-14 h-20 flex flex-col items-center justify-center text-gray-600 status-icon border border-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            <span class="text-[10px] font-bold">照明</span>
+                        </div>
+
+                        <!-- 無線電狀態 -->
+                        <div id="status-radio" class="bg-gray-800 p-1 rounded-lg shadow-md w-14 h-20 flex flex-col items-center justify-center text-gray-600 status-icon border border-gray-700 relative">
+                            <!-- 波紋 -->
+                            <svg class="radio-wave absolute top-1 right-1 w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                            </svg>
+                            <!-- 對講機機身 -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="7" y="6" width="10" height="14" rx="2" />
+                                <line x1="9" y1="6" x2="9" y2="2" />
+                                <line x1="17" y1="4" x2="17" y2="6" />
+                                <circle cx="12" cy="11" r="2" />
+                                <line x1="10" y1="16" x2="14" y2="16" />
+                            </svg>
+                            <span class="text-[10px] font-bold">無線電</span>
+                        </div>
+
+                        <!-- 手機電量 -->
+                        <div class="bg-gray-800 p-1 rounded-lg shadow-md w-14 h-20 flex flex-col items-center justify-center relative border border-gray-700">
+                            <span class="text-[10px] text-gray-400 font-bold mb-1">手機</span>
+                            <div class="relative w-6 h-8 border-2 border-gray-500 bg-gray-900 rounded-sm overflow-hidden">
+                                <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-3 h-0.5 bg-gray-500 rounded-b-sm z-10"></div>
+                                <div id="phone-battery-bar" class="absolute bottom-0 left-0 w-full transition-all duration-500" style="height: 0%"></div>
+                            </div>
+                            <div class="text-[10px] font-bold text-green-400 mt-0.5">
+                                <span id="val-phone">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 遊戲主要內容 -->
+            <main class="w-full">
+                <header class="text-center mb-6">
+                    <h1 id="phase-title" class="text-4xl font-bold text-yellow-400 drop-shadow-md"></h1>
+                </header>
+
+                <!-- 情境報告 (含圖片) -->
+                <div class="bg-gray-800 rounded-xl shadow-2xl mb-10 overflow-hidden border border-gray-600">
+                    <img id="scenario-image" src="" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1477601263545-51d103b72cb8?auto=format&fit=crop&w=800&q=80';" class="story-image hidden" alt="情境圖片">
+                    <div id="scenario-report" class="p-6 text-lg leading-loose text-gray-200">
+                        <!-- JS 會在這裡插入情境報告 -->
+                    </div>
+                </div>
+
+                <!-- 電器卡片區 -->
+                <div id="appliance-list" class="space-y-8">
+                    <h2 class="text-2xl font-bold text-gray-300 mb-6 text-center border-b border-gray-700 pb-2">選擇你要使用的電器：</h2>
+                    
+                    <!-- 高耗能 -->
+                    <section>
+                        <h3 class="text-2xl font-bold text-red-500 mb-4 flex items-center">
+                            <span class="text-3xl mr-3">👹</span> 毀滅級 (高耗能)
+                        </h3>
+                        <div id="high-energy-list" class="grid grid-cols-1 gap-6"></div>
+                    </section>
+                    
+                    <!-- 中耗能 -->
+                    <section>
+                        <h3 class="text-2xl font-bold text-amber-500 mb-4 flex items-center">
+                            <span class="text-3xl mr-3">🟡</span> 戰術級 (中耗能)
+                        </h3>
+                        <div id="medium-energy-list" class="grid grid-cols-1 gap-6"></div>
+                    </section>
+
+                    <!-- 低耗能 -->
+                    <section>
+                        <h3 class="text-2xl font-bold text-green-500 mb-4 flex items-center">
+                            <span class="text-3xl mr-3">💚</span> 維生級 (低耗能)
+                        </h3>
+                        <div id="low-energy-list" class="grid grid-cols-1 gap-6"></div>
+                    </section>
+                </div>
+            </main>
+
+            <!-- 浮動推進按鈕 -->
+            <button id="proceed-button" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-5 px-6 rounded-t-xl text-2xl shadow-[0_-5px_15px_rgba(0,0,0,0.3)] transition duration-300 mt-8 fixed bottom-0 left-0 right-0 z-20 max-w-xl mx-auto opacity-95 border-t-2 border-blue-400">
+                推進到 中午 (12:00)
+            </button>
+        </div>
+
+        <!-- 畫面 3: 總結報告 -->
+        <div id="conclusion-screen" class="hidden flex flex-col items-center justify-center min-h-[90vh] text-center pt-20 pb-20">
+
+            <div id="conclusion-feedback" class="text-xl mb-8 p-8 bg-gray-800 rounded-xl text-left w-full border-l-8 border-yellow-400 shadow-2xl leading-relaxed"></div>
+
+            <header class="mb-8">
+                <h1 id="conclusion-title" class="text-4xl md:text-5xl font-bold text-yellow-400 mb-4">試煉總結</h1>
+            </header>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl w-full">
+                <p id="conclusion-stats" class="text-xl text-gray-300 mb-8 font-bold"></p>
+                
+                <div class="text-left text-lg bg-gray-900 p-6 rounded-lg mb-8 space-y-3">
+                    <p><span class="text-red-400 font-bold">最終飽足度:</span> <span id="final-fullness"></span>%</p>
+                    <p><span class="text-blue-400 font-bold">最終健康:</span> <span id="final-health"></span>%</p>
+                    <p><span class="text-purple-400 font-bold">最終心情:</span> <span id="final-mood"></span>%</p>
+                    <p><span class="text-cyan-400 font-bold">最終手機電量:</span> <span id="final-phone"></span>%</p>
+                    <p><span class="text-green-400 font-bold">無線電:</span> <span id="final-radio"></span></p>
+                </div>
+                
+                <button id="reset-button" class="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-5 px-6 rounded-lg text-2xl shadow-lg transition duration-300">
+                    重新挑戰
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 電器資料 ---
+            const applianceData = {
+                high: [
+                    { id: 'ih_stove', name: '電磁爐 (煮一餐)', cost: 3, type: 'consumable', desc: '填飽肚子是生存的基礎。', effects: { fullness: +50, health: +10, mood: +20 } },
+                    { id: 'heater', name: '電暖器 (使用 4 小時)', cost: 3, type: 'consumable', desc: '對抗 9°C 低溫的關鍵熱源。', effects: { health: +30, mood: +10 } }
+                ],
+                medium: [
+                    { id: 'kettle', name: '熱水壺 (泡茶/咖啡/熱湯)', cost: 2, type: 'consumable', desc: '暖身又暖心，小幅補充熱量。', effects: { health: +20, mood: +10, fullness: +10 } },
+                    { id: 'media_player', name: '多媒體播放器 (娛樂 2 小時)', cost: 2, type: 'consumable', desc: '適度娛樂可以避免心理崩潰。', effects: { mood: +50 } }
+                ],
+                low: [
+                    { 
+                        id: 'phone', 
+                        name: '手機 (充電一次)', 
+                        cost: 1, 
+                        type: 'consumable', 
+                        desc: '通訊生命線。瀏覽訊息可立即提升心情。', 
+                        effects: { phone: +100, mood: +30 } 
+                    },
+                    { id: 'led_light', name: 'LED 露營燈 (開啟常駐)', cost: 1, type: 'toggle', desc: '只需開啟一次，即可照明至明天早上。', effects: { mood: +10 } },
+                    { id: 'radio', name: '無線電 (開啟監聽)', cost: 1, type: 'toggle', desc: '開啟後持續運作，隨時接收救援訊號。', effects: { mood: +10 } }
+                ]
+            };
+
+            // --- 遊戲狀態 ---
+            let gameState = {};
+
+            const defaultGameState = {
+                energy: 10,
+                phase: 0, // 0: 07:00, 1: 12:00, 2: 18:00, 3: 21:00
+                stats: {
+                    fullness: 50,
+                    health: 70,
+                    mood: 60,
+                    phone: 0
+                },
+                flags: {
+                    led_light_on: false,
+                    radio_on: false,
+                    darkness_penalty_applied: false,
+                    low_temp_penalty_applied: false,
+                    heater_used_tonight: false, 
+                    kettle_used_tonight: false
+                }
+            };
+
+            // 設定本地圖片路徑
+            const phaseDetails = [
+                { 
+                    time: "早上 (07:00)", 
+                    proceedText: "推進到 中午 (12:00)", 
+                    img: "images/morning_cold.jpg",
+                    backupImg: "https://images.unsplash.com/photo-1477601263545-51d103b72cb8?auto=format&fit=crop&w=800&q=80"
+                },
+                { 
+                    time: "中午 (12:00)", 
+                    proceedText: "推進到 傍晚 (18:00)", 
+                    img: "images/noon_hungry.jpg",
+                    backupImg: "https://images.unsplash.com/photo-1518983830254-89a2069fa2f9?auto=format&fit=crop&w=800&q=80"
+                },
+                { 
+                    time: "傍晚 (18:00)", 
+                    proceedText: "推進到 睡前 (21:00)", 
+                    img: "images/evening_dark.jpg",
+                    backupImg: "https://images.unsplash.com/photo-1536746803623-14438dacec89?auto=format&fit=crop&w=800&q=80"
+                },
+                { 
+                    time: "睡前 (21:00)", 
+                    proceedText: "睡覺 (結束這一天)", 
+                    img: "images/night_freeze.jpg",
+                    backupImg: "https://images.unsplash.com/photo-1504333638930-c8787321eee0?auto=format&fit=crop&w=800&q=80"
+                }
+            ];
+
+            // --- DOM 元素 ---
+            const screens = {
+                intro: document.getElementById('intro-screen'),
+                game: document.getElementById('game-screen'),
+                conclusion: document.getElementById('conclusion-screen')
+            };
+
+            const buttons = {
+                start: document.getElementById('start-button'),
+                reset: document.getElementById('reset-button'),
+                proceed: document.getElementById('proceed-button')
+            };
+
+            const ui = {
+                energyDisplay: document.getElementById('energy-display'),
+                energyCount: document.getElementById('energy-count'),
+                phaseTitle: document.getElementById('phase-title'),
+                scenarioReport: document.getElementById('scenario-report'),
+                scenarioImage: document.getElementById('scenario-image'),
+                lists: {
+                    high: document.getElementById('high-energy-list'),
+                    medium: document.getElementById('medium-energy-list'),
+                    low: document.getElementById('low-energy-list')
+                },
+                bars: {
+                    fullness: document.getElementById('bar-fullness'),
+                    health: document.getElementById('bar-health'),
+                    mood: document.getElementById('bar-mood'),
+                    phone: document.getElementById('phone-battery-bar')
+                },
+                vals: {
+                    fullness: document.getElementById('val-fullness'),
+                    health: document.getElementById('val-health'),
+                    mood: document.getElementById('val-mood'),
+                    phone: document.getElementById('val-phone')
+                },
+                statusIcons: {
+                    light: document.getElementById('status-light'),
+                    radio: document.getElementById('status-radio')
+                },
+                conclusion: {
+                    title: document.getElementById('conclusion-title'),
+                    stats: document.getElementById('conclusion-stats'),
+                    feedback: document.getElementById('conclusion-feedback'),
+                    finalFullness: document.getElementById('final-fullness'),
+                    finalHealth: document.getElementById('final-health'),
+                    finalMood: document.getElementById('final-mood'),
+                    finalPhone: document.getElementById('final-phone'),
+                    finalRadio: document.getElementById('final-radio')
+                }
+            };
+
+            // --- 遊戲流程控制 ---
+
+            function startGame() {
+                screens.intro.classList.add('hidden');
+                screens.conclusion.classList.add('hidden');
+                screens.game.classList.remove('hidden');
+                document.body.classList.remove('warm-mode');
+                
+                gameState = JSON.parse(JSON.stringify(defaultGameState));
+                
+                renderEnergyBlocks();
+                renderAllApplianceCards();
+                renderPhase(""); 
+
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            }
+
+            buttons.start.addEventListener('click', startGame);
+            buttons.reset.addEventListener('click', startGame);
+            buttons.proceed.addEventListener('click', proceedToNextPhase);
+
+            // --- 核心渲染函式 ---
+
+            function renderPhase(reportText) {
+                const phase = phaseDetails[gameState.phase];
+                
+                ui.phaseTitle.textContent = phase.time;
+                buttons.proceed.textContent = phase.proceedText;
+                
+                ui.scenarioImage.classList.add('hidden');
+                ui.scenarioImage.onload = function() {
+                    this.classList.remove('hidden');
+                };
+                ui.scenarioImage.onerror = function() {
+                    this.onerror = null;
+                    this.src = phase.backupImg;
+                    this.classList.remove('hidden');
+                };
+                ui.scenarioImage.src = phase.img;
+                
+                ui.scenarioReport.innerHTML = reportText;
+                
+                updateStatsUI();
+                updateEnergyUI();
+                updateAllCardButtons();
+            }
+
+            // 修改：電池改回 1x10 單排顯示，使用 grid-cols-10
+            function renderEnergyBlocks() {
+                ui.energyDisplay.innerHTML = '';
+                ui.energyDisplay.className = "grid grid-cols-10 gap-1 mb-1 h-10 px-1"; 
+                
+                for(let i = 0; i < 10; i++) {
+                    const block = document.createElement('div');
+                    block.id = `energy-block-${i}`;
+                    block.className = 'energy-block h-full rounded';
+                    ui.energyDisplay.appendChild(block);
+                }
+            }
+
+            function renderAllApplianceCards() {
+                ui.lists.high.innerHTML = '';
+                ui.lists.medium.innerHTML = '';
+                ui.lists.low.innerHTML = '';
+
+                applianceData.high.forEach(app => ui.lists.high.appendChild(createCard(app, 'high')));
+                applianceData.medium.forEach(app => ui.lists.medium.appendChild(createCard(app, 'medium')));
+                applianceData.low.forEach(app => ui.lists.low.appendChild(createCard(app, 'low')));
+            }
+
+            function createCard(app, category) {
+                const card = document.createElement('div');
+                card.className = `bg-gray-800 p-5 rounded-lg shadow-lg card-category-${category} flex flex-col border border-gray-700`;
+
+                let effectsText = '';
+                for (const [key, value] of Object.entries(app.effects)) {
+                    const sign = value > 0 ? '+' : '';
+                    let displayKey = '', colorClass = '';
+                    switch (key) {
+                        case 'fullness': displayKey = '飽足度'; colorClass = 'text-red-400'; break;
+                        case 'health': displayKey = '健康'; colorClass = 'text-blue-400'; break;
+                        case 'mood': displayKey = '心情'; colorClass = 'text-purple-400'; break;
+                        case 'phone': displayKey = '手機電量'; colorClass = 'text-cyan-400'; break;
+                    }
+                    effectsText += `<span class="${colorClass} font-bold text-xl mr-3 whitespace-nowrap">${displayKey}${sign}${value}%</span> `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex-grow mb-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="text-xl md:text-2xl font-bold text-white">${app.name}</h4>
+                            <span class="text-base text-gray-300 whitespace-nowrap ml-2 bg-gray-900 px-2 py-1 rounded">消耗 <span class="font-bold text-xl text-yellow-400">${app.cost}</span> 格</span>
+                        </div>
+                        <p class="text-lg text-gray-300 mb-3 leading-snug">${app.desc}</p>
+                        <div class="mt-3 flex flex-wrap">${effectsText}</div>
+                    </div>
+                    <button data-id="${app.id}" data-cost="${app.cost}" data-type="${app.type}" class="select-btn w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-6 rounded-lg transition duration-300 text-xl shadow-md border-b-4 border-green-700 active:border-0 active:translate-y-1">
+                        使用
+                    </button>
+                `;
+                
+                card.querySelector('.select-btn').addEventListener('click', () => useAppliance(app.id, category));
+                return card;
+            }
+
+            // --- UI 更新函式 ---
+
+            function updateStatsUI() {
+                const stats = gameState.stats;
+                for(let key in stats) stats[key] = Math.min(100, Math.max(0, stats[key]));
+
+                ui.vals.fullness.textContent = `${stats.fullness}%`;
+                ui.vals.health.textContent = `${stats.health}%`;
+                ui.vals.mood.textContent = `${stats.mood}%`;
+                ui.vals.phone.textContent = `${stats.phone}%`;
+
+                ui.bars.fullness.style.width = `${stats.fullness}%`;
+                ui.bars.health.style.width = `${stats.health}%`;
+                ui.bars.mood.style.width = `${stats.mood}%`;
+                ui.bars.phone.style.height = `${stats.phone}%`;
+                
+                ui.bars.fullness.className = `survival-bar-fill rounded-full ${stats.fullness < 50 ? 'red' : 'green'}`;
+                ui.bars.health.className = `survival-bar-fill rounded-full ${stats.health < 50 ? 'red' : 'blue'}`;
+                ui.bars.mood.className = `survival-bar-fill rounded-full ${stats.mood < 50 ? 'red' : 'purple'}`;
+
+                let phoneColor = 'green';
+                if (stats.phone <= 20) phoneColor = 'red';
+                else if (stats.phone <= 50) phoneColor = 'yellow';
+                ui.bars.phone.className = `absolute bottom-0 left-0 w-full bg-${phoneColor}-500 transition-all duration-500`;
+
+                updateStatusIcon(ui.statusIcons.light, gameState.flags.led_light_on, 'text-yellow-400');
+                updateStatusIcon(ui.statusIcons.radio, gameState.flags.radio_on, 'text-green-400');
+            }
+
+            function updateStatusIcon(el, isActive, activeClass) {
+                if (isActive) {
+                    el.classList.remove('text-gray-600');
+                    el.classList.add(activeClass, 'border-2', 'border-opacity-50');
+                    el.classList.add('active');
+                    if (activeClass.includes('yellow')) el.classList.add('border-yellow-400');
+                    if (activeClass.includes('green')) el.classList.add('border-green-400');
+                } else {
+                    el.classList.add('text-gray-600');
+                    el.classList.remove(activeClass, 'border-2', 'border-yellow-400', 'border-green-400', 'border-opacity-50');
+                    el.classList.remove('active');
+                }
+            }
+
+            function updateEnergyUI() {
+                ui.energyCount.textContent = gameState.energy;
+                ui.energyCount.className = gameState.energy <= 3 ? 'text-red-500 text-2xl' : 'text-green-400 text-2xl';
+
+                for(let i = 0; i < 10; i++) {
+                    const block = document.getElementById(`energy-block-${i}`);
+                    if (i < gameState.energy) {
+                        block.classList.add('full');
+                        block.classList.remove('empty');
+                    } else {
+                        block.classList.add('empty');
+                        block.classList.remove('full');
+                    }
+                }
+            }
+
+            function updateAllCardButtons() {
+                document.querySelectorAll('.select-btn').forEach(btn => {
+                    const cost = parseInt(btn.dataset.cost);
+                    const type = btn.dataset.type;
+                    const id = btn.dataset.id;
+                    
+                    let isDisabled = false;
+                    let text = "使用";
+
+                    if (type === 'toggle' && gameState.flags[id + '_on']) {
+                        isDisabled = true;
+                        text = "已開啟";
+                    } else if (cost > gameState.energy) {
+                        isDisabled = true;
+                        text = "電力不足";
+                    }
+
+                    btn.disabled = isDisabled;
+                    btn.textContent = text;
+                    
+                    btn.className = "select-btn w-full font-bold py-4 px-6 rounded-lg transition duration-300 text-xl shadow-md border-b-4 active:border-0 active:translate-y-1";
+                    
+                    if (isDisabled) {
+                        btn.classList.add('cursor-not-allowed', 'border-transparent');
+                        if (text === "已開啟") {
+                            btn.classList.add('bg-gray-600', 'text-gray-300');
+                        } else { 
+                            btn.classList.add('bg-red-900', 'text-red-200', 'opacity-60');
+                        }
+                    } else {
+                        btn.classList.add('bg-green-600', 'hover:bg-green-500', 'text-white', 'border-green-700');
+                    }
+                });
+            }
+
+            // --- 核心遊戲邏輯 ---
+
+            function useAppliance(id, category) {
+                const allAppliances = [...applianceData.high, ...applianceData.medium, ...applianceData.low];
+                const app = allAppliances.find(a => a.id === id);
+
+                if (!app || gameState.energy < app.cost) return;
+
+                gameState.energy -= app.cost;
+
+                for (const [key, value] of Object.entries(app.effects)) {
+                    gameState.stats[key] = Math.min(100, gameState.stats[key] + value);
+                }
+
+                if (app.type === 'toggle') {
+                    gameState.flags[id + '_on'] = true;
+                }
+
+                if (gameState.phase === 3) {
+                    if (id === 'heater') gameState.flags.heater_used_tonight = true;
+                    if (id === 'kettle') gameState.flags.kettle_used_tonight = true;
+                }
+
+                if (id === 'heater') {
+                    document.body.classList.add('warm-mode');
+                }
+
+                updateEnergyUI();
+                updateStatsUI();
+                updateAllCardButtons();
+            }
+
+            // 產生情境描述
+            function generateStory(phase, passiveEffects) {
+                let story = "";
+                
+                if (passiveEffects.length > 0) {
+                    story += `<div class="mb-6 p-4 bg-gray-900 rounded border-l-8 border-red-500 text-base text-gray-200 shadow-inner">${passiveEffects.join("<br>")}</div>`;
+                }
+
+                if (phase === 1) { // 12:00
+                    story += `<p class="mb-3">太陽升到了頭頂，但微弱的陽光無法穿透厚重的雲層，氣溫依然沒有回升的跡象。</p>`;
+                    if (gameState.stats.fullness >= 50) {
+                        story += `<p class="text-green-400">空氣中瀰漫著食物殘留的香氣。因為早上攝取了熱騰騰的食物，暖意從胃部擴散到四肢。家人的臉色紅潤，眼神中還有光，正在討論著接下來的計畫。</p>`;
+                    } else if (gameState.stats.fullness < 40) {
+                        story += `<p class="text-red-400">胃部因為空虛而開始隱隱抽痛。因為缺乏熱量，身體開始不自覺地顫抖以維持體溫。家人們各自縮在角落，眼神渙散，沒有人想開口說話，氣氛沉重得讓人窒息。</p>`;
+                    } else {
+                        story += `<p class="text-gray-400">大家感到有些餓了，但目前還在可忍受的範圍內。</p>`;
+                    }
+                } else if (phase === 2) { // 18:00
+                    story += `<p class="mb-3">夕陽沉入地平線，最後一絲自然光正被夜色吞噬。原本熟悉的家，在陰影中變得陌生且猙獰。</p>`;
+                    
+                    if (gameState.flags.led_light_on) {
+                        story += `<p class="text-green-400 mb-2">你打開了 LED 露營燈。雖然只是一束白光，但它在漆黑的客廳中劃出了『安全區』。光線驅散了角落的陰影，也讓家人原本緊繃的神情稍微放鬆了一些。</p>`;
+                    } else {
+                        story += `<p class="text-purple-400 mb-2">隨著光線消失，黑暗完全接管了室內。你只能透過窗外微弱的星光勉強辨識家具的輪廓。這種『視覺被剝奪』的感覺讓恐懼感成倍放大。</p>`;
+                    }
+
+                    if (gameState.stats.phone > 20) {
+                        story += `<p class="text-cyan-400 mb-2">手中的手機螢幕亮著，這方寸間的光芒與資訊，是你與現代文明僅存的連結，讓你確信自己沒有被世界遺忘。</p>`;
+                    } else {
+                        story += `<p class="text-red-400 mb-2">你下意識地按了按手機，但漆黑的螢幕毫無反應。那種與世隔絕的『孤島感』瞬間襲來，切斷了你最後的求救希望。</p>`;
+                    }
+
+                    if (gameState.stats.mood < 40) {
+                        story += `<p class="text-red-500 font-bold border-l-4 border-red-500 pl-3"> (警告) 持續的壓力像一塊巨石壓在胸口。你感到異常煩躁，甚至開始懷疑這一切是否還有意義。絕望感正在吞噬你的理智……</p>`;
+                    }
+
+                } else if (phase === 3) { // 21:00
+                    story += `<p class="mb-3">夜深了，這是一天中最危險的時刻。氣溫降到了最低點，連呼吸都感到刺痛。</p>`;
+                    
+                    if (gameState.flags.led_light_on) {
+                        story += `<p class="text-green-400 mb-3">露營燈溫暖而穩定的光芒，在漆黑的房間裡撐起了一把保護傘。光線驅散了恐懼，讓家人能看清彼此的臉，這份安心感是無價的。</p>`;
+                    } else {
+                        story += `<p class="text-purple-400 mb-3">四周伸手不見五指，黑暗如同潮水般將你們淹沒。任何一點風吹草動——窗戶的嘎吱聲、遠處的狗叫聲，都被無限放大。恐懼在黑暗中滋長，沒人敢闔上眼。</p>`;
+                    }
+                    
+                    story += `<p class="font-bold text-blue-400 border-t-2 border-gray-600 pt-4 mt-4 text-lg">(系統提示) 在這種低溫下入睡，若沒有足夠的熱源（電暖器/熱水壺），極可能在睡夢中失溫或凍傷。</p>`;
+                }
+
+                return story;
+            }
+
+            function proceedToNextPhase() {
+                let passiveReports = []; 
+                
+                document.body.classList.remove('warm-mode');
+
+                if (gameState.phase < 3) {
+                    gameState.stats.fullness = Math.max(0, gameState.stats.fullness - 30);
+                    passiveReports.push("時間流逝，消耗了熱量 (飽足度 -30%)");
+
+                    if (gameState.stats.fullness < 50) {
+                        gameState.stats.health = Math.max(0, gameState.stats.health - 5);
+                        gameState.stats.mood = Math.max(0, gameState.stats.mood - 5);
+                        passiveReports.push("飽足度過低，感到虛弱煩躁 (健康-5%, 心情-5%)");
+                    }
+
+                    if (gameState.stats.phone > 0) {
+                        gameState.stats.phone = Math.max(0, gameState.stats.phone - 30);
+                        passiveReports.push("待機與查看資訊消耗電力 (手機 -30%)");
+                    } else {
+                        gameState.stats.mood = Math.max(0, gameState.stats.mood - 20);
+                        passiveReports.push("無法與外界聯繫，孤立感讓你心情低落 (心情 -20%)");
+                    }
+                }
+
+                gameState.phase++;
+
+                if ((gameState.phase === 2 || gameState.phase === 3) && !gameState.flags.led_light_on) {
+                    gameState.stats.mood = Math.max(0, gameState.stats.mood - 15);
+                    passiveReports.push("黑暗看不見周圍，恐懼感侵蝕意志 (心情 -15%)");
+                }
+
+                if (gameState.phase === 4) { 
+                    const hasHeater = gameState.flags.heater_used_tonight;
+                    const hasKettle = gameState.flags.kettle_used_tonight;
+                    let sleepReport = "";
+
+                    if (!hasHeater && !hasKettle) {
+                        gameState.stats.health = Math.max(0, gameState.stats.health - 30);
+                        sleepReport = "<span class='text-red-500'>沒有熱源，嚴重凍傷 (健康 -30%)</span>";
+                    } else if (!hasHeater && hasKettle) {
+                        gameState.stats.health = Math.max(0, gameState.stats.health - 15);
+                        sleepReport = "<span class='text-red-400'>只有熱飲不夠保暖，受寒了 (健康 -15%)</span>";
+                    } else {
+                        sleepReport = "<span class='text-green-400'>室內保持溫暖，安穩入睡。</span>";
+                    }
+                    
+                    checkFinalEvent(sleepReport);
+                    return;
+                }
+                
+                if (gameState.stats.fullness <= 0 || gameState.stats.health <= 0 || gameState.stats.mood <= 0) {
+                    let reason = "挑戰失敗。";
+                    if (gameState.stats.fullness <= 0) reason = "你因飽足度歸零而昏倒...<br>挑戰失敗。";
+                    if (gameState.stats.health <= 0) reason = "你因健康歸零而倒下...<br>挑戰失敗。";
+                    if (gameState.stats.mood <= 0) reason = "你因精神崩潰而放棄生存...<br>挑戰失敗。";
+                    
+                    showConclusion(false, reason);
+                    return;
+                }
+
+                const storyHTML = generateStory(gameState.phase, passiveReports);
+                renderPhase(storyHTML);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function checkFinalEvent(sleepReport) {
+                let finalReport = "";
+                finalReport += `<p class="mb-6 border-b-2 border-gray-600 pb-6 text-xl">${sleepReport}</p>`;
+                
+                ui.scenarioImage.src = "images/intruder_alert.jpg";
+                ui.scenarioImage.onerror = function() {
+                    this.onerror = null;
+                    this.src = "https://images.unsplash.com/photo-1626672758949-540334017f95?auto=format&fit=crop&w=800&q=80";
+                    this.classList.remove('hidden');
+                };
+                ui.scenarioImage.classList.remove('hidden');
+
+                finalReport += "<strong class='text-3xl text-red-500 block mb-6'>(深夜 03:00) 砰！巨響傳來，有入侵者！你必須立刻求救！</strong>";
+
+                if (gameState.stats.health <= 0) {
+                     finalReport += "<p class='text-red-400 text-xl'>你想要跳起來，但身體僵硬得像塊冰，手腳完全不聽使喚。嚴重的失溫讓你意識模糊，連翻身的力氣都沒有…… (挑戰失敗)</p>";
+                     showConclusion(false, finalReport);
+                     return;
+                }
+
+                finalReport += "<p class='text-gray-300 text-lg mb-4'>多虧了睡前的保暖措施，你的身體依然靈活。腎上腺素爆發，你瞬間清醒並抓住了身邊的通訊器材！</p>";
+
+                const canCall = gameState.stats.phone > 0;
+                const canRadio = gameState.flags.radio_on;
+
+                if (canCall) {
+                    finalReport += "<p class='text-green-400 text-2xl font-bold'>你抓起手機成功撥號... 救援隊正在路上！</p>";
+                    showConclusion(true, finalReport);
+                } else if (canRadio) {
+                    finalReport += "<p class='text-green-400 text-2xl font-bold'>無線電傳來了回應... 救援隊聽到了你的求救！</p>";
+                    showConclusion(true, finalReport);
+                } else {
+                    finalReport += "<p class='text-red-400 text-2xl font-bold'>你的手機一片漆黑，無線電也靜悄悄。你錯失了唯一的求救機會...</p>";
+                    showConclusion(false, finalReport);
+                }
+            }
+
+            function showConclusion(isSuccess, reason) {
+                screens.game.classList.add('hidden');
+                screens.conclusion.classList.remove('hidden');
+
+                if (isSuccess) {
+                    ui.conclusion.title.textContent = "❮ 挑戰成功 ❯";
+                    ui.conclusion.title.classList.remove('text-red-500');
+                    ui.conclusion.title.classList.add('text-green-400');
+                    ui.conclusion.feedback.innerHTML = reason; 
+                    ui.conclusion.feedback.classList.remove('text-red-400', 'border-red-500');
+                    ui.conclusion.feedback.classList.add('text-green-400', 'border-green-400');
+                } else {
+                    ui.conclusion.title.textContent = "❮ 挑戰失敗 ❯";
+                    ui.conclusion.title.classList.remove('text-green-400');
+                    ui.conclusion.title.classList.add('text-red-500');
+                    ui.conclusion.feedback.innerHTML = reason;
+                    ui.conclusion.feedback.classList.remove('text-green-400', 'border-green-400');
+                    ui.conclusion.feedback.classList.add('text-red-400', 'border-red-500');
+                }
+
+                ui.conclusion.stats.textContent = `你總共消耗了 ${10 - gameState.energy} 格電，剩餘 ${gameState.energy} 格。`;
+                
+                ui.conclusion.finalFullness.textContent = gameState.stats.fullness;
+                ui.conclusion.finalHealth.textContent = gameState.stats.health;
+                ui.conclusion.finalMood.textContent = gameState.stats.mood;
+                ui.conclusion.finalPhone.textContent = gameState.stats.phone;
+                ui.conclusion.finalRadio.textContent = gameState.flags.radio_on ? "已開啟" : "未開啟";
+
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            }
+        });
+    </script>
+</body>
+</html>

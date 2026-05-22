@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0c1827">
+<title>風之呼吸 — 無線電暗語</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  #game-screen { padding-top: 140px; padding-bottom: 100px; }
+  .btn-choice { transition: transform .1s, opacity .2s; }
+  .btn-choice:active { transform: scale(.97); }
+  .btn-correct { background-color: #15803d !important; border-color: #16a34a !important; }
+  .btn-wrong   { background-color: #b91c1c !important; border-color: #dc2626 !important; }
+  .shake { animation: shake-x .4s ease; }
+  @keyframes shake-x {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)}
+    60%{transform:translateX(-5px)}
+    80%{transform:translateX(5px)}
+  }
+  .pop-in { animation: popIn .35s ease; }
+  @keyframes popIn {
+    0%{transform:scale(.85);opacity:0}
+    70%{transform:scale(1.04)}
+    100%{transform:scale(1);opacity:1}
+  }
+  .radio-wave { animation: radioWave 1.8s ease-in-out infinite; }
+  @keyframes radioWave {
+    0%,100%{opacity:.3;transform:scale(1)}
+    50%{opacity:1;transform:scale(1.08)}
+  }
+</style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+<!-- ── Fixed Header ── -->
+<div id="header" class="fixed top-0 left-0 right-0 z-50 bg-gray-900/96 backdrop-blur border-b border-sky-900 max-w-xl mx-auto">
+  <div class="px-4 pt-3 pb-3">
+    <div class="flex items-center justify-between mb-2">
+      <span id="h-round" class="text-sky-400 font-bold text-lg">第 1 關 / 5</span>
+      <span class="text-2xl radio-wave">📻</span>
+      <span id="h-score" class="text-yellow-400 font-bold text-lg">100 分</span>
+    </div>
+    <div class="w-full bg-gray-700 rounded-full h-2.5">
+      <div id="prog-bar" class="bg-sky-400 h-2.5 rounded-full transition-all duration-500" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Game Screen ── -->
+<div id="game-screen" class="max-w-xl mx-auto px-4">
+
+  <!-- Active round content -->
+  <div id="screen-game"></div>
+
+  <!-- Result screen -->
+  <div id="screen-result" class="hidden flex flex-col items-center justify-center py-10 text-center"></div>
+
+</div>
+
+<!-- ── Fixed CTA ── -->
+<div class="fixed bottom-0 left-0 right-0 z-50 max-w-xl mx-auto px-4 pb-5 pt-3 bg-gradient-to-t from-gray-900 via-gray-900/95 to-transparent">
+  <button id="cta-btn" onclick="handleCTA()"
+    class="w-full py-4 text-xl font-bold rounded-2xl bg-sky-600 active:bg-sky-700 text-white shadow-lg hidden">
+    下一關 →
+  </button>
+</div>
+
+<script>
+// ── Codename table ──
+const CODES = [
+  { real:'我',   code:'老鷹', emoji:'👤' },
+  { real:'家人', code:'堡壘', emoji:'👨‍👩‍👧' },
+  { real:'水',   code:'磁磚', emoji:'💧' },
+  { real:'食物', code:'花生', emoji:'🍚' },
+  { real:'安全', code:'綠燈', emoji:'✅' },
+  { real:'危險', code:'紅燈', emoji:'⚠️' },
+  { real:'幫助', code:'補給', emoji:'🆘' },
+];
+
+// ── Rounds ──
+const ROUNDS = [
+  {
+    icon: '📡',
+    tag: '頻道選擇',
+    tagColor: 'bg-blue-800 text-blue-200',
+    situation: '你在城市的大樓裡，\n要用無線電跟家人聯絡。\n\n應該選哪種頻道？',
+    question: '選出正確的答案：',
+    choices: [
+      { text: 'VHF\n（適合野外、遠距離）', correct: false },
+      { text: 'UHF\n（適合城市、室內）',   correct: true  },
+    ],
+    ok: '✅ 答對了！UHF 穿透力強，在城市和室內效果最好！',
+  },
+  {
+    icon: '📤',
+    tag: '加密發報 1',
+    tagColor: 'bg-sky-800 text-sky-200',
+    situation: '你在外面偵察，\n發現家人沒有水喝，\n但是大家都很安全。',
+    question: '你要怎麼用暗語回報？',
+    choices: [
+      { text: '堡壘沒有磁磚，綠燈', correct: true  },
+      { text: '老鷹沒有花生，綠燈', correct: false },
+      { text: '堡壘沒有磁磚，紅燈', correct: false },
+    ],
+    ok: '✅ 答對了！家人＝堡壘、水＝磁磚、安全＝綠燈！',
+  },
+  {
+    icon: '📤',
+    tag: '加密發報 2',
+    tagColor: 'bg-sky-800 text-sky-200',
+    situation: '你找到了食物，\n但是附近有危險！',
+    question: '你要怎麼用暗語回報？',
+    choices: [
+      { text: '老鷹找到花生，紅燈', correct: true  },
+      { text: '堡壘找到磁磚，紅燈', correct: false },
+      { text: '老鷹找到花生，綠燈', correct: false },
+    ],
+    ok: '✅ 答對了！我＝老鷹、食物＝花生、危險＝紅燈！',
+  },
+  {
+    icon: '📤',
+    tag: '加密發報 3',
+    tagColor: 'bg-sky-800 text-sky-200',
+    situation: '家人需要你幫忙，\n現在環境是安全的。',
+    question: '你要怎麼用暗語回報？',
+    choices: [
+      { text: '堡壘需要補給，綠燈', correct: true  },
+      { text: '老鷹需要補給，紅燈', correct: false },
+      { text: '堡壘需要磁磚，綠燈', correct: false },
+    ],
+    ok: '✅ 答對了！家人＝堡壘、幫助＝補給、安全＝綠燈！',
+  },
+  {
+    icon: '📥',
+    tag: '解碼收報',
+    tagColor: 'bg-indigo-800 text-indigo-200',
+    situation: '你收到一則無線電訊息：\n\n「堡壘的磁磚不夠，\n老鷹快回來，綠燈」',
+    question: '這句話的真實意思是？',
+    choices: [
+      { text: '家人沒有水，我快回來，很安全', correct: true  },
+      { text: '我沒有食物，家人快來，有危險', correct: false },
+      { text: '家人沒有水，我快回來，有危險', correct: false },
+    ],
+    ok: '✅ 答對了！堡壘＝家人、磁磚＝水、老鷹＝我、綠燈＝安全！',
+  },
+];
+
+// ── State ──
+let S = { round: 0, score: 100, answered: false };
+
+// ── Helpers ──
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function adjustPadding() {
+  const h = document.getElementById('header').offsetHeight;
+  document.getElementById('game-screen').style.paddingTop = (h + 12) + 'px';
+}
+
+// ── Render round ──
+function render() {
+  const r = ROUNDS[S.round];
+  S.answered = false;
+
+  document.getElementById('h-round').textContent = `第 ${S.round + 1} 關 / ${ROUNDS.length}`;
+  document.getElementById('h-score').textContent = `${S.score} 分`;
+  document.getElementById('prog-bar').style.width = `${(S.round / ROUNDS.length) * 100}%`;
+  document.getElementById('cta-btn').classList.add('hidden');
+
+  // Shuffle choices but track correct answer
+  const indexed = r.choices.map((c, i) => ({ ...c, orig: i }));
+  const shuffled = shuffle(indexed);
+
+  const situationHtml = r.situation.replace(/\n/g, '<br>');
+
+  const codesHtml = CODES.map(c =>
+    `<div class="bg-gray-700/80 rounded-xl px-3 py-2 text-sm text-center">
+       <span class="mr-1">${c.emoji}</span>${c.real}&nbsp;＝&nbsp;<span class="text-sky-300 font-bold">${c.code}</span>
+     </div>`
+  ).join('');
+
+  const choicesHtml = shuffled.map((c, i) =>
+    `<button id="ch-${i}" onclick="pick(${i}, ${c.correct})"
+       class="btn-choice w-full text-left px-5 py-4 rounded-2xl border-2 border-gray-600 bg-gray-800
+              text-white text-lg font-medium mb-3 leading-snug">
+       ${c.text.replace(/\n/g, '<br>')}
+     </button>`
+  ).join('');
+
+  document.getElementById('screen-game').innerHTML = `
+    <div class="pop-in">
+      <!-- Tag + icon -->
+      <div class="flex items-center gap-3 mb-5 mt-1">
+        <span class="text-4xl">${r.icon}</span>
+        <span class="text-xs font-bold px-3 py-1 rounded-full ${r.tagColor}">${r.tag}</span>
+      </div>
+
+      <!-- Situation card -->
+      <div class="bg-gray-800 border border-sky-900 rounded-2xl px-5 py-4 mb-5 text-center">
+        <p class="text-gray-200 text-base leading-relaxed">${situationHtml}</p>
+      </div>
+
+      <!-- Codename reference -->
+      <details class="mb-5 bg-gray-800/70 rounded-2xl border border-gray-700 overflow-hidden">
+        <summary class="px-4 py-3 text-sky-400 font-semibold text-sm cursor-pointer select-none list-none">
+          📖 暗語表（點開查看）
+        </summary>
+        <div class="px-4 pb-4 grid grid-cols-2 gap-2">
+          ${codesHtml}
+        </div>
+      </details>
+
+      <!-- Question -->
+      <p class="text-gray-400 text-sm mb-3 text-center">${r.question}</p>
+
+      <!-- Choices -->
+      <div id="choices-wrap">${choicesHtml}</div>
+
+      <!-- Feedback -->
+      <div id="feedback" class="hidden mt-4 rounded-2xl px-5 py-4 text-base font-semibold text-center"></div>
+    </div>
+  `;
+
+  adjustPadding();
+}
+
+function pick(idx, correct) {
+  if (S.answered) return;
+  const btn = document.getElementById(`ch-${idx}`);
+  const fb  = document.getElementById('feedback');
+
+  if (correct) {
+    S.answered = true;
+    btn.classList.add('btn-correct');
+    fb.classList.remove('hidden');
+    fb.className = 'mt-4 rounded-2xl px-5 py-4 text-base font-semibold text-center bg-green-900/60 text-green-300 border border-green-700';
+    fb.textContent = ROUNDS[S.round].ok;
+
+    const cta = document.getElementById('cta-btn');
+    cta.classList.remove('hidden');
+    cta.textContent = S.round < ROUNDS.length - 1 ? '下一關 →' : '看結果 🎉';
+  } else {
+    S.score = Math.max(0, S.score - 10);
+    document.getElementById('h-score').textContent = `${S.score} 分`;
+    btn.classList.add('btn-wrong', 'shake');
+    setTimeout(() => btn.classList.remove('shake'), 400);
+
+    fb.classList.remove('hidden');
+    fb.className = 'mt-4 rounded-2xl px-5 py-4 text-base font-semibold text-center bg-red-900/50 text-red-300 border border-red-800';
+    fb.textContent = '❌ 再想想看！打開暗語表查一查，再試一次。';
+
+    setTimeout(() => {
+      btn.disabled = true;
+      btn.style.opacity = '0.35';
+    }, 350);
+  }
+}
+
+function handleCTA() {
+  S.round++;
+  if (S.round >= ROUNDS.length) {
+    showResult();
+  } else {
+    render();
+  }
+}
+
+function showResult() {
+  document.getElementById('screen-game').classList.add('hidden');
+  document.getElementById('cta-btn').classList.add('hidden');
+  document.getElementById('prog-bar').style.width = '100%';
+  document.getElementById('h-round').textContent = '任務完成！';
+
+  const sc = S.score;
+  let stars, title, msg;
+  if      (sc >= 100) { stars=5; title='無線電高手';   msg='完美！敵人完全聽不懂你說什麼！'; }
+  else if (sc >= 80)  { stars=4; title='通訊達人';     msg='很厲害！幾乎都答對了！'; }
+  else if (sc >= 60)  { stars=3; title='見習報員';     msg='不錯喔！多練習就能更好！'; }
+  else if (sc >= 40)  { stars=2; title='學習中';       msg='繼續加油！把暗語表背熟！'; }
+  else                { stars=1; title='新手報員';     msg='沒關係，再玩一次就會進步！'; }
+
+  const starsHtml = '⭐'.repeat(stars) + '☆'.repeat(5 - stars);
+
+  const codesRecap = CODES.map(c =>
+    `<div class="bg-gray-700 rounded-xl px-3 py-2 text-sm flex items-center gap-2">
+       <span>${c.emoji}</span>
+       <span class="text-gray-300">${c.real}</span>
+       <span class="text-gray-500">→</span>
+       <span class="text-sky-300 font-bold">${c.code}</span>
+     </div>`
+  ).join('');
+
+  document.getElementById('screen-result').innerHTML = `
+    <div class="pop-in w-full">
+      <div class="text-6xl mb-3">📻</div>
+      <h2 class="text-2xl font-bold text-sky-400 mb-2">${title}</h2>
+      <div class="text-3xl mb-3">${starsHtml}</div>
+      <div class="text-5xl font-black text-white mb-2">${sc} <span class="text-2xl font-normal text-gray-400">分</span></div>
+      <p class="text-gray-300 text-lg mb-8">${msg}</p>
+
+      <div class="bg-gray-800 rounded-2xl p-5 mb-6 text-left border border-sky-900 w-full">
+        <div class="text-sky-400 font-bold mb-3 text-center text-sm">暗語表複習</div>
+        <div class="grid grid-cols-2 gap-2">${codesRecap}</div>
+      </div>
+
+      <button onclick="restart()" class="w-full py-4 text-xl font-bold rounded-2xl bg-sky-600 active:bg-sky-700 text-white">
+        再玩一次 🔄
+      </button>
+    </div>
+  `;
+  document.getElementById('screen-result').classList.remove('hidden');
+  adjustPadding();
+}
+
+function restart() {
+  S = { round: 0, score: 100, answered: false };
+  document.getElementById('screen-game').classList.remove('hidden');
+  document.getElementById('screen-result').classList.add('hidden');
+  render();
+}
+
+// Init
+render();
+window.addEventListener('load', adjustPadding);
+window.addEventListener('resize', adjustPadding);
+</script>
+</body>
+</html>

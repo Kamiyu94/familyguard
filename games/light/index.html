@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d0500">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>光之呼吸</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0d0500}
+body{display:flex;align-items:center;justify-content:center;font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC',sans-serif}
+
+#wrap{position:relative;width:100vw;height:100vh;height:100dvh;max-width:430px;overflow:hidden;background:#060200}
+
+.scr{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scr.on{display:flex}
+
+/* ══ INTRO ══ */
+#s-intro{background:radial-gradient(ellipse at 50% 35%,#4a1e00,#1a0800 60%,#0a0300);padding:0;justify-content:flex-start;overflow:hidden}
+.intro-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;gap:.85rem;padding:1.5rem 1.5rem 1rem;width:100%}
+.intro-foot{flex-shrink:0;padding:.85rem 1.5rem;padding-bottom:calc(.85rem + env(safe-area-inset-bottom,0px));background:rgba(5,2,0,.96);border-top:1px solid rgba(255,178,56,.12);width:100%}
+.intro-foot .btn{width:100%}
+.i-sword{font-size:4rem;animation:sway 3s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.i-badge{font-size:1.5rem;color:#FFB238;letter-spacing:.2em}
+.i-title{font-size:2.6rem;font-weight:900;color:#fff;line-height:1;text-shadow:0 0 40px #FFB23860}
+.i-sub{font-size:1.4rem;color:#888;letter-spacing:.1em}
+.i-body{font-size:1.3rem;color:#c8924a;line-height:1.9;max-width:260px}
+.lcards{display:flex;gap:.5rem;width:100%;padding:0 .2rem}
+.lcard{flex:1;background:rgba(255,255,255,.06);border:2px solid rgba(255,200,100,.2);border-radius:18px;padding:1.1rem .4rem 1rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-height:175px;transition:all .2s}
+.lcard.sel{border-color:#FFB238;background:rgba(255,178,56,.13);transform:translateY(-4px);box-shadow:0 8px 22px rgba(255,178,56,.2)}
+.lc-i{font-size:3.2rem}
+.lc-n{font-size:1.1rem;font-weight:700;color:#FFB238}
+.lc-d{font-size:.95rem;color:#999;line-height:1.6}
+.sel-hint{font-size:1rem;color:#555;max-width:280px;line-height:1.55}
+
+/* pre-placement mosaic */
+#scene.pre-place{filter:blur(6px) brightness(0.28) saturate(0.2)}
+
+/* ══ GAME ══ */
+#s-game{padding:0;background:#030100}
+#scene{position:absolute;inset:0;overflow:hidden;touch-action:none}
+#r-wall{position:absolute;top:0;left:0;right:0;height:63%;background:linear-gradient(to bottom,#050200,#090400)}
+#r-floor{position:absolute;bottom:0;left:0;right:0;height:37%;background:linear-gradient(to bottom,#0b0500,#070200)}
+#r-line{position:absolute;top:63%;left:0;right:0;height:1px;background:rgba(255,178,56,.05)}
+#r-win{position:absolute;top:7%;left:12%;width:28%;height:14%;border:1px solid rgba(255,255,255,.04);background:rgba(0,0,20,.2);border-radius:4px}
+#r-win::before,#r-win::after{content:'';position:absolute;background:rgba(255,255,255,.025)}
+#r-win::before{top:0;bottom:0;left:50%;width:1px}
+#r-win::after{left:0;right:0;top:50%;height:1px}
+#r-shelf{position:absolute;top:7%;right:9%;width:22%;height:11%;border:1px solid rgba(255,255,255,.03);background:rgba(0,0,0,.15);border-radius:3px}
+
+canvas#cv{position:absolute;inset:0;pointer-events:none;z-index:10}
+
+/* HUD */
+#hud{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:.5rem .8rem .45rem;padding-top:calc(.5rem + env(safe-area-inset-top,0px));background:rgba(0,0,0,.85);border-bottom:1px solid rgba(255,178,56,.1)}
+.h-scn{font-size:1.3rem;color:#FFB238;font-weight:700}
+.h-lgt{font-size:1.1rem;color:#888}
+.h-tmr{font-size:1.4rem;color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
+#btn-exit{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#aaa;font-size:1.4rem;width:44px;height:44px;border-radius:50%;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+
+/* progress strip */
+#prog-wrap{position:absolute;top:0;left:0;right:0;z-index:19}
+#prog-fill{height:4px;background:linear-gradient(90deg,#FFB238,#ff8800);width:0%;transition:width .35s}
+
+/* bottom instruction */
+#instr{position:absolute;bottom:0;left:0;right:0;z-index:20;padding:.65rem 1rem;padding-bottom:calc(.65rem + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.85);color:#ccc;font-size:1.3rem;text-align:center;line-height:1.6}
+
+/* ── BRIEFING OVERLAY ── */
+#brief{position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem 1.2rem;gap:.8rem;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#brief.hidden{display:none}
+.br-no{font-size:1rem;color:#FFB238;letter-spacing:.2em}
+.br-icon{font-size:3.5rem}
+.br-ttl{font-size:2rem;font-weight:900;color:#fff;line-height:1.2}
+.br-body{font-size:1.3rem;color:#ccc;line-height:1.8;max-width:290px;white-space:pre-line}
+.br-tool{font-size:1.2rem;color:#FFB238;background:rgba(255,178,56,.1);border:1px solid rgba(255,178,56,.25);padding:.4em 1.2em;border-radius:10px}
+
+/* S2 illustration */
+.s2-demo{position:relative;width:140px;height:200px;margin:.2rem auto;flex-shrink:0}
+.s2-patient{position:absolute;left:50%;top:50%;transform:translate(-50%,-55%);font-size:5rem;line-height:1;filter:brightness(.7)}
+.s2-spot{position:absolute;font-size:1.6rem;animation:wpulse 1.2s ease-in-out infinite}
+@keyframes wpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+.s2-spot:nth-child(3){animation-delay:.15s}
+.s2-spot:nth-child(4){animation-delay:.3s}
+.s2-spot:nth-child(5){animation-delay:.45s}
+.s2-spot:nth-child(6){animation-delay:.6s}
+
+/* S3 illustration */
+.s3-demo{position:relative;width:180px;height:180px;background:rgba(0,0,0,.5);border-radius:14px;overflow:hidden;flex-shrink:0;margin:.2rem auto}
+.s3-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(255,178,56,.35),transparent 70%);animation:gpulse 3s ease-in-out infinite}
+@keyframes gpulse{0%,20%{opacity:0;transform:translate(-50%,-50%) scale(.3)}50%,75%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%,100%{opacity:0;transform:translate(-50%,-50%) scale(.3)}}
+.s3-lamp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2.2rem;z-index:2}
+.s3-p{position:absolute;font-size:1.9rem;animation:3s ease-in-out infinite;filter:brightness(.12)}
+.s3-p1{top:6%;left:6%;animation-name:dm-tl}
+.s3-p2{top:6%;right:6%;animation-name:dm-tr}
+.s3-p3{bottom:6%;left:6%;animation-name:dm-bl}
+.s3-p4{bottom:6%;right:6%;animation-name:dm-br}
+.s3-p1{animation-delay:.1s}.s3-p2{animation-delay:.3s}.s3-p3{animation-delay:.5s}.s3-p4{animation-delay:.7s}
+@keyframes dm-tl{0%,20%{transform:translate(0,0);filter:brightness(.08)}55%,78%{transform:translate(48px,46px);filter:brightness(1)}92%,100%{transform:translate(0,0);filter:brightness(.08)}}
+@keyframes dm-tr{0%,20%{transform:translate(0,0);filter:brightness(.08)}55%,78%{transform:translate(-48px,46px);filter:brightness(1)}92%,100%{transform:translate(0,0);filter:brightness(.08)}}
+@keyframes dm-bl{0%,20%{transform:translate(0,0);filter:brightness(.08)}55%,78%{transform:translate(48px,-46px);filter:brightness(1)}92%,100%{transform:translate(0,0);filter:brightness(.08)}}
+@keyframes dm-br{0%,20%{transform:translate(0,0);filter:brightness(.08)}55%,78%{transform:translate(-48px,-46px);filter:brightness(1)}92%,100%{transform:translate(0,0);filter:brightness(.08)}}
+.s3-note{font-size:1.05rem;color:#aaa;margin-top:.3rem}
+
+/* ── EXIT OVERLAY ── */
+#exit-menu{position:absolute;inset:0;z-index:40;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem}
+#exit-menu.on{display:flex}
+.ex-ttl{font-size:2rem;font-weight:900;color:#fff}
+.ex-sub{font-size:1.2rem;color:#888}
+
+/* game objects */
+.obj{position:absolute;transform:translate(-50%,-50%);font-size:3rem;line-height:1;padding:18px;cursor:pointer;filter:brightness(.07) blur(1px);transition:filter .15s;touch-action:none}
+.obj.lit{filter:brightness(1) blur(0)}
+.obj.found{animation:pop .45s ease-out forwards;pointer-events:none}
+@keyframes pop{0%{transform:translate(-50%,-50%) scale(1);opacity:1}45%{transform:translate(-50%,-50%) scale(1.7)}100%{transform:translate(-50%,-50%) scale(0);opacity:0}}
+
+.person{position:absolute;transform:translate(-50%,-50%);font-size:2.8rem;line-height:1;filter:brightness(.05);touch-action:none}
+.person.lit{filter:brightness(1)}
+.person.done{filter:brightness(.7);opacity:.45}
+
+#safezone{position:absolute;transform:translate(-50%,-50%);width:95px;height:95px;border-radius:50%;background:rgba(255,178,56,.1);border:2px dashed rgba(255,178,56,.4);display:none;z-index:1}
+
+/* toast */
+#toast{position:absolute;bottom:16%;left:50%;transform:translateX(-50%) scale(0);z-index:50;background:rgba(5,5,15,.92);color:#fff;padding:.55rem 1.4rem;border-radius:50px;font-size:1.5rem;font-weight:700;border:1px solid rgba(255,255,255,.1);transition:transform .18s ease;pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) scale(1)}
+
+/* ══ RESULT ══ */
+#s-result{background:radial-gradient(ellipse at 50% 20%,#0c1e38,#040d1a);gap:.85rem;padding:1.5rem 1.2rem}
+.r-ttl{font-size:2rem;font-weight:900;color:#fff}
+.r-time{font-size:1.2rem;color:#888}
+.r-time b{color:#FFB238;font-size:1.4rem}
+.r-ratings{display:flex;gap:.6rem;width:100%;max-width:360px}
+.rtool{flex:1;background:rgba(255,255,255,.05);border:2px solid transparent;border-radius:16px;padding:.85rem .4rem;display:flex;flex-direction:column;align-items:center;gap:.25rem}
+.rtool.you{border-color:#FFB238;background:rgba(255,178,56,.1)}
+.ri{font-size:2.2rem}
+.rn{font-size:.9rem;color:#aaa}
+.rs .g{color:#FFB238;font-size:1.3rem}.rs .e{color:#2a2a2a;font-size:1.3rem}
+.ry{font-size:.85rem;color:#FFB238;font-weight:700}
+.r-insight{font-size:1.15rem;color:#ccc;background:rgba(255,255,255,.04);padding:.8rem 1rem;border-radius:13px;line-height:1.8;max-width:340px;text-align:left}
+.r-insight b{color:#FFB238}
+
+/* ══ FINAL ══ */
+#s-final{background:radial-gradient(ellipse at 50% 40%,#2a1200,#041020);gap:.75rem;padding:1.5rem 1rem;justify-content:flex-start;padding-top:max(1.5rem,calc(env(safe-area-inset-top) + .5rem))}
+.f-crown{font-size:3rem;margin-top:.3rem}
+.f-ttl{font-size:1.8rem;font-weight:900;color:#FFB238;line-height:1.3}
+.f-sub{font-size:1.1rem;color:#aaa}
+.sum-tbl{border-collapse:collapse;width:100%;max-width:380px;font-size:1.1rem}
+.sum-tbl th{color:#FFB238;font-weight:700;padding:.5em .3em;border-bottom:1px solid rgba(255,178,56,.2);text-align:center}
+.sum-tbl td{padding:.5em .3em;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);color:#ddd}
+.sum-tbl .tool-name{text-align:left;font-size:1rem}
+.sum-tbl .best{color:#4dff91;font-weight:700}
+.sum-tbl .you-row td{background:rgba(255,178,56,.08)}
+.f-note{font-size:1rem;color:#555;text-align:center}
+.f-btns{display:flex;gap:.7rem;flex-wrap:wrap;justify-content:center}
+
+/* ══ SPEED STARS ══ */
+.sg{color:#FFB238}.se{color:rgba(255,255,255,.1)}
+.r-speed{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.65rem 1rem;background:rgba(255,178,56,.08);border:1px solid rgba(255,178,56,.25);border-radius:14px;width:100%;max-width:360px}
+.spd-lbl{font-size:.95rem;color:#FFB238;font-weight:700;letter-spacing:.1em}
+.spd-val{font-size:2.8rem;line-height:1.1}
+.spd-msg{font-size:1.05rem;color:#aaa}
+#f-stars{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.6rem 1rem;background:rgba(255,178,56,.08);border:1px solid rgba(255,178,56,.25);border-radius:14px;width:100%;max-width:380px}
+.f-spd-val{font-size:2rem;line-height:1.2}
+.f-spd-sub{font-size:1rem;color:#aaa}
+
+/* ══ BUTTONS ══ */
+.btn{font-family:inherit;font-size:2.25rem;font-weight:700;border:none;border-radius:50px;cursor:pointer;padding:.75em 2em;min-height:64px;transition:transform .12s}
+.btn:active{transform:scale(.94)}
+.btn-p{background:linear-gradient(135deg,#FFB238,#ff7d00);color:#fff;box-shadow:0 5px 22px rgba(255,178,56,.35)}
+.btn-s{background:rgba(255,255,255,.08);color:#eee;border:1px solid rgba(255,255,255,.18);font-size:1.8rem}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<!-- INTRO + SELECT (merged) -->
+<div id="s-intro" class="scr on">
+  <div class="intro-scroll">
+    <div class="i-sword">⚔️</div>
+    <div class="i-badge">鬼殺隊 · 光之試煉</div>
+    <div class="i-title">照亮黑夜</div>
+    <div class="i-sub">三種光源 · 三個任務</div>
+    <div class="i-body">停電了！選一種照明工具，<br>完成三個緊急任務，發現它的強項與弱點。</div>
+    <div class="lcards">
+      <div class="lcard" onclick="pickLight('flashlight',this)">
+        <div class="lc-i">🔦</div>
+        <div class="lc-n">手電筒</div>
+        <div class="lc-d">光束強<br>照得遠<br>需手持</div>
+      </div>
+      <div class="lcard" onclick="pickLight('headlamp',this)">
+        <div class="lc-i">🤿</div>
+        <div class="lc-n">頭燈</div>
+        <div class="lc-d">戴在頭<br>雙手自由<br>中等亮度</div>
+      </div>
+      <div class="lcard" onclick="pickLight('lantern',this)">
+        <div class="lc-i">💡</div>
+        <div class="lc-n">露營燈</div>
+        <div class="lc-d">大範圍<br>可移動<br>稍微暗一點</div>
+      </div>
+    </div>
+    <div class="sel-hint">選好了就出發！玩完三關你就知道差在哪了。</div>
+  </div>
+  <div class="intro-foot">
+    <button class="btn btn-p" id="btn-start" style="opacity:.35;pointer-events:none" onclick="startGame()">出發！</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="s-game" class="scr">
+  <div id="scene">
+    <div id="r-wall"></div><div id="r-floor"></div><div id="r-line"></div>
+    <div id="r-win"></div><div id="r-shelf"></div>
+    <div id="safezone"></div>
+  </div>
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <span class="h-scn" id="h-scn">關卡 1/3</span>
+    <span class="h-lgt" id="h-lgt">🔦 手電筒</span>
+    <span class="h-tmr" id="h-tmr">0.0s</span>
+    <button id="btn-exit" onclick="showExit()">✕</button>
+  </div>
+  <div id="prog-wrap"><div id="prog-fill"></div></div>
+  <div id="instr"></div>
+
+  <!-- BRIEFING -->
+  <div id="brief">
+    <div class="br-no" id="br-no"></div>
+    <div class="br-icon" id="br-icon"></div>
+    <div class="br-ttl" id="br-ttl"></div>
+    <div id="br-illus"></div><!-- illustration slot -->
+    <div class="br-body" id="br-body"></div>
+    <div class="br-tool" id="br-tool"></div>
+    <button class="btn btn-p" onclick="beginPlay()">準備好了！</button>
+  </div>
+
+  <!-- EXIT MENU -->
+  <div id="exit-menu">
+    <div class="ex-ttl">⏸ 暫停</div>
+    <div class="ex-sub">要繼續還是離開？</div>
+    <button class="btn btn-p" style="width:100%;max-width:280px" onclick="hideExit()">繼續遊戲</button>
+    <button class="btn btn-s" style="width:100%;max-width:280px" onclick="giveUp()">放棄這關 →</button>
+    <button class="btn btn-s" style="width:100%;max-width:280px" onclick="location.reload()">回主頁 🏠</button>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<!-- RESULT -->
+<div id="s-result" class="scr">
+  <div class="r-ttl" id="r-ttl"></div>
+  <div class="r-time" id="r-time"></div>
+  <div class="r-speed" id="r-speed"></div>
+  <div class="r-ratings" id="r-ratings"></div>
+  <div class="r-insight" id="r-insight"></div>
+  <button class="btn btn-p" id="btn-next" onclick="nextScene()"></button>
+</div>
+
+<!-- FINAL -->
+<div id="s-final" class="scr">
+  <div class="f-crown">🏆</div>
+  <div class="f-ttl">光之呼吸<br>奧義皆傳！</div>
+  <div class="f-sub">你已親身體驗三種光源的強項與弱點</div>
+  <div id="f-stars"></div>
+  <table class="sum-tbl">
+    <thead><tr><th class="tool-name">工具</th><th>找逃生包</th><th>包紮傷口</th><th>召集家人</th></tr></thead>
+    <tbody>
+      <tr id="tr-flashlight"><td class="tool-name">🔦 手電筒</td><td class="best">★★★</td><td>★</td><td>★</td></tr>
+      <tr id="tr-headlamp"><td class="tool-name">🤿 頭燈</td><td>★★</td><td class="best">★★★</td><td>★★</td></tr>
+      <tr id="tr-lantern"><td class="tool-name">💡 露營燈</td><td>★</td><td>★★</td><td class="best">★★★</td></tr>
+    </tbody>
+  </table>
+  <div class="f-note">換一種工具再玩，感受差異！</div>
+  <div class="f-btns">
+    <button class="btn btn-s" onclick="reset()">換工具再玩</button>
+    <button class="btn btn-p" onclick="location.reload()">回主頁</button>
+  </div>
+</div>
+
+</div>
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const LIGHTS={
+  // alwaysOn=false → light only when finger touching (flashlight held in hand)
+  // alwaysOn=true  → light stays at last position even when finger lifts (headlamp)
+  flashlight:{name:'手電筒',icon:'🔦',r:75, dim:.98, fixed:false,alwaysOn:false},
+  headlamp:  {name:'頭燈',  icon:'🤿',r:112,dim:.95, fixed:false,alwaysOn:true },
+  lantern:   {name:'露營燈',icon:'💡',r:205,dim:.90, fixed:false,alwaysOn:true },
+};
+const RATINGS={
+  1:{flashlight:3,headlamp:2,lantern:1},
+  2:{flashlight:1,headlamp:3,lantern:2},
+  3:{flashlight:1,headlamp:2,lantern:3},
+};
+const INSIGHTS={
+  1:{
+    flashlight:'<b>手電筒</b>光束集中穿遠，就算最遠的角落也能照到，搜索是它最大的強項！',
+    headlamp:  '<b>頭燈</b>光束範圍中等，搜索時需要多移動幾步才能看清角落。',
+    lantern:   '<b>露營燈</b>固定在原地，光圈照不到遠處角落！搜索時只能看到靠近中央的東西。',
+  },
+  2:{
+    flashlight:'<b>手電筒</b>必須一手握著才有光！你發現了嗎——手指一離開螢幕，燈就滅了。真實情況下，這隻手就沒辦法做其他事。',
+    headlamp:  '<b>頭燈</b>戴在頭上，雙手完全自由！手離開後光還留著——這就是頭燈包紮最方便的原因！',
+    lantern:   '<b>露營燈</b>提供大範圍光源，傷口看得很清楚，雙手也自由，包紮起來還算順手。',
+  },
+  3:{
+    flashlight:'<b>手電筒</b>光束只能照一個方向，每次只能引導一個家人，要一個個帶，非常慢！',
+    headlamp:  '<b>頭燈</b>可以轉頭照不同方向，但每次最多引導一兩個人，速度中等。',
+    lantern:   '<b>露營燈</b>放在集合點中央，大範圍光一次照亮所有人！家人全部看到光，一起走過來——這就是它最大的強項！',
+  },
+};
+
+// 速度星等門檻：[3★秒數上限, 2★秒數上限]
+const SPEED_STARS={1:[15,30],2:[30,55],3:[30,55]};
+const SPEED_MSGS={3:'閃電速度！⚡',2:'反應不錯！',1:'再快一點！',0:'下次繼續努力！'};
+
+// ── STATE ─────────────────────────────────────────────────
+const G={
+  light:null,scn:0,
+  tx:0,ty:0,           // current touch/mouse position
+  fingerDown:false,    // is finger currently on screen?
+  activeTouches:0,
+  startT:0,elapsed:0,
+  timerId:null,rafId:null,persRafId:null,
+  done:false,gaveUp:false,scores:[],starScores:[],
+  bandIdx:0,
+  persons:[],goalX:0,goalY:0,arrived:0,lastT:0,
+  lanternX:0,lanternY:0,lanternCooldownEnd:0,lanternPrePlace:false,
+};
+const YOFF=72; // light appears this many px ABOVE the finger
+
+// ── HELPERS ───────────────────────────────────────────────
+function showScr(id){document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on')}
+function g(id){return document.getElementById(id)}
+function mk(tag,cls){const e=document.createElement(tag);e.className=cls;return e}
+function toast(msg,ms=1500){const t=g('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms)}
+function vib(p){if(navigator.vibrate)navigator.vibrate(p)}
+function stars(n){let s='';for(let i=1;i<=3;i++)s+=`<span class="${i<=n?'g':'e'}">★</span>`;return s}
+function speedStars(n,t,gaveUp){if(gaveUp)return 0;const[t3,t2]=SPEED_STARS[n];return t<=t3?3:t<=t2?2:1}
+function renderSpeedStars(n,ss){return`<div class="spd-lbl">你的速度</div><div class="spd-val">${[1,2,3].map(i=>`<span class="${i<=ss?'sg':'se'}">★</span>`).join('')}</div><div class="spd-msg">${SPEED_MSGS[ss]}</div>`}
+
+// Light center position
+function lightX(){if(G.light==='lantern')return G.lanternX;const L=LIGHTS[G.light||'flashlight'];return L.fixed?g('cv').width/2:G.tx}
+function lightY(){if(G.light==='lantern')return G.lanternY;const L=LIGHTS[G.light||'flashlight'];return L.fixed?g('cv').height/2:G.ty-YOFF}
+function isLightOn(){
+  const L=LIGHTS[G.light||'flashlight'];
+  if(L.fixed)return true;
+  if(!L.alwaysOn)return G.fingerDown; // flashlight: only on when touching
+  return true; // headlamp: always on at last position
+}
+
+// ── LIGHT PICK ────────────────────────────────────────────
+let selCard=null;
+function pickLight(type,card){
+  if(selCard)selCard.classList.remove('sel');
+  selCard=card;card.classList.add('sel');G.light=type;
+  const btn=g('btn-start');btn.style.opacity='1';btn.style.pointerEvents='auto';
+}
+
+// ── GAME FLOW ─────────────────────────────────────────────
+function startGame(){
+  if(!G.light)return;
+  G.scn=0;G.scores=[];
+  loadScenario(1);showScr('s-game');
+}
+
+function loadScenario(n){
+  G.scn=n;G.done=false;G.gaveUp=false;
+  clearInterval(G.timerId);
+  cancelAnimationFrame(G.rafId);
+  cancelAnimationFrame(G.persRafId);
+
+  const wrap=g('wrap'),cv=g('cv');
+  cv.width=wrap.offsetWidth;cv.height=wrap.offsetHeight;
+  const W=cv.width,H=cv.height;
+
+  G.tx=W/2;G.ty=H/2+YOFF;
+  G.fingerDown=false;
+  if(G.light==='lantern'){G.lanternX=W/2;G.lanternY=H/2;G.lanternCooldownEnd=0;}
+
+  document.querySelectorAll('.obj,.person').forEach(e=>e.remove());
+  g('safezone').style.display='none';
+  g('prog-fill').style.width='0%';
+  g('exit-menu').classList.remove('on');
+
+  if(n===1)buildS1(W,H);
+  else if(n===2)buildS2(W,H);
+  else buildS3(W,H);
+
+  // Lantern S1: start in pre-placement darkness
+  G.lanternPrePlace=(G.light==='lantern'&&n===1);
+  if(G.lanternPrePlace)g('scene').classList.add('pre-place');
+  else g('scene').classList.remove('pre-place');
+
+  const L=LIGHTS[G.light];
+  g('h-scn').textContent=`關卡 ${n}/3`;
+  g('h-lgt').textContent=`${L.icon} ${L.name}`;
+  g('h-tmr').textContent='0.0s';
+
+  const isLantern=G.light==='lantern';
+  const instrs=[null,
+    isLantern?'選好位置　放下露營燈開始搜索！':L.alwaysOn?'移動光源　找到背包就點擊！':'用手指拖動　手指離開燈就滅！',
+    isLantern?'拖動露營燈照傷口　放開後等5秒才能再移':L.alwaysOn?'移動光源照傷口　點擊傷口包紮！':'⚠️ 手指一離開螢幕燈就滅！',
+    isLantern?'拖動露營燈照到家人　放開後等5秒才能再移':'用光照到家人　他們就會走向集合點',
+  ];
+  g('instr').textContent=instrs[n];
+
+  // build briefing illustration
+  buildBriefIllus(n);
+
+  const nos=['','第一關','第二關','第三關'];
+  const icons=['','🎒','🩹','👨‍👩‍👧‍👦'];
+  const ttls=['','找出逃生背包！','幫家人包紮傷口！','召集全家人！'];
+  const bodies=[null,
+    G.light==='lantern'?'停電了！一片黑暗。\n先選好位置，放下露營燈，\n再開始搜索逃生背包！':'停電了！黑暗中藏著一個逃生背包。\n用手指移動光源，仔細搜索。\n找到背包就點擊它！',
+    '家人受傷了，身上有5個傷口。\n把光照到發紅的傷口，然後點擊它包紮。\n包紮完才出現下一個傷口！',
+    '家人分散在黑暗中。\n用光照到他們，他們就會走向\n中央的安全集合點！',
+  ];
+  g('br-no').textContent=nos[n];
+  g('br-icon').textContent=icons[n];
+  g('br-ttl').textContent=ttls[n];
+  g('br-body').textContent=bodies[n];
+  g('br-tool').textContent=`你使用：${L.icon} ${L.name}`;
+  g('brief').classList.remove('hidden');
+
+  cancelAnimationFrame(G.rafId);
+  drawLoop();
+}
+
+function buildBriefIllus(n){
+  const slot=g('br-illus');
+  slot.innerHTML='';
+  if(n===2){
+    // static patient with pulsing wounds
+    slot.innerHTML=`
+      <div class="s2-demo">
+        <div class="s2-patient">🧍</div>
+        <div class="s2-spot" style="left:42%;top:18%">🔴</div>
+        <div class="s2-spot" style="left:62%;top:33%">🔴</div>
+        <div class="s2-spot" style="left:28%;top:38%">🔴</div>
+        <div class="s2-spot" style="left:48%;top:58%">🔴</div>
+        <div class="s2-spot" style="left:44%;top:74%">🔴</div>
+      </div>
+      <div style="font-size:1.1rem;color:#aaa">找到🔴就點擊它！一次一個</div>`;
+  } else if(n===3){
+    slot.innerHTML=`
+      <div class="s3-demo">
+        <div class="s3-glow"></div>
+        <div class="s3-lamp">💡</div>
+        <div class="s3-p s3-p1">👨</div>
+        <div class="s3-p s3-p2">👩</div>
+        <div class="s3-p s3-p3">👧</div>
+        <div class="s3-p s3-p4">👦</div>
+      </div>
+      <div class="s3-note">光照到家人 → 他們走向中央</div>`;
+  }
+}
+
+// ── SCENARIO 1: FIND BAG ──────────────────────────────────
+// Bag at (0.65, 0.60) — within lantern range from center:
+// On 390×844: pos=(254,506), center=(195,422), dist=sqrt(59²+84²)≈103px < 205px ✓
+// But distractor items at corners ARE outside lantern range (lesson still taught)
+function buildS1(W,H){
+  const items=[
+    {x:.15,y:.20,e:'📱'},{x:.78,y:.18,e:'👟'},
+    {x:.20,y:.65,e:'🧸'},{x:.58,y:.40,e:'📚'},
+    {x:.65,y:.60,e:'🎒',t:true},{x:.36,y:.80,e:'🍎'},
+  ];
+  items.forEach(it=>{
+    const d=mk('div','obj');d.textContent=it.e;
+    d.style.left=(it.x*W)+'px';d.style.top=(it.y*H)+'px';
+    if(it.t){d.dataset.target='1';d.addEventListener('pointerdown',onBagTap,{passive:true})}
+    g('scene').appendChild(d);
+  });
+}
+function onBagTap(e){
+  e.stopPropagation();if(G.done)return;
+  const obj=e.currentTarget;
+  const ox=parseFloat(obj.style.left),oy=parseFloat(obj.style.top);
+  if(!checkLit(ox,oy)){toast('先把光照到它！🔦');vib(50);return}
+  vib([50,30,100]);obj.classList.add('found');G.done=true;
+  setTimeout(finishScenario,500);
+}
+
+// ── SCENARIO 2: BANDAGE ───────────────────────────────────
+const WOUNDS=[[-0.04,-0.19],[0.09,-0.05],[-0.09,0.04],[0.03,0.17],[-0.04,0.27]];
+function buildS2(W,H){
+  G.bandIdx=0;
+  const px=.50,py=.48;
+  const pat=mk('div','obj');
+  pat.id='patient';pat.textContent='🧍';
+  pat.style.cssText=`left:${px*W}px;top:${py*H}px;font-size:clamp(3.5rem,11vw,5rem);pointer-events:none`;
+  g('scene').appendChild(pat);
+  WOUNDS.forEach((rel,i)=>{
+    const spot=mk('div','obj');spot.dataset.wi=i;spot.textContent='🔴';
+    spot.style.cssText=`left:${(px+rel[0])*W}px;top:${(py+rel[1])*H}px;font-size:1.8rem;display:${i===0?'':'none'}`;
+    spot.addEventListener('pointerdown',onWoundTap,{passive:true});
+    g('scene').appendChild(spot);
+  });
+}
+function onWoundTap(e){
+  e.stopPropagation();if(G.done)return;
+  const spot=e.currentTarget;const idx=parseInt(spot.dataset.wi);
+  if(idx!==G.bandIdx)return;
+  const ox=parseFloat(spot.style.left),oy=parseFloat(spot.style.top);
+  if(!checkLit(ox,oy)){toast('先照亮傷口！');vib(50);return}
+  vib(80);spot.textContent='✅';spot.style.pointerEvents='none';
+  G.bandIdx++;
+  g('prog-fill').style.width=(G.bandIdx/WOUNDS.length*100)+'%';
+  if(G.bandIdx<WOUNDS.length){
+    const next=document.querySelector(`.obj[data-wi="${G.bandIdx}"]`);
+    if(next)next.style.display='';
+    toast(`${G.bandIdx}/${WOUNDS.length} 包紮完成`);
+  }else{
+    G.done=true;toast('全部包紮完成！🎉');vib([80,30,150]);
+    setTimeout(finishScenario,700);
+  }
+}
+
+// ── SCENARIO 3: GATHER FAMILY ─────────────────────────────
+function buildS3(W,H){
+  G.arrived=0;G.goalX=W*.50;G.goalY=H*.52;
+  const sz=g('safezone');sz.style.left=G.goalX+'px';sz.style.top=G.goalY+'px';sz.style.display='';
+  const corners=[[.12,.15],[.82,.15],[.12,.82],[.82,.82]];
+  const emojis=['👨','👩','👧','👦'];
+  G.persons=corners.map((c,i)=>{
+    const d=mk('div','person');d.textContent=emojis[i];
+    d.style.left=(c[0]*W)+'px';d.style.top=(c[1]*H)+'px';
+    g('scene').appendChild(d);
+    return{x:c[0]*W,y:c[1]*H,done:false,el:d};
+  });
+}
+function animPersons(){
+  if(G.done)return;
+  const now=performance.now();
+  const dt=Math.min((now-G.lastT)/1000,.05);G.lastT=now;
+  const L=LIGHTS[G.light];
+  const cx=lightX(),cy=lightY();
+  const lit=isLightOn();
+  const SPEED=60;
+  G.persons.forEach(p=>{
+    if(p.done)return;
+    const inLight=lit&&Math.sqrt((p.x-cx)**2+(p.y-cy)**2)<L.r;
+    p.el.classList.toggle('lit',inLight);
+    if(!inLight)return;
+    const tx=G.goalX-p.x,ty=G.goalY-p.y;
+    const d=Math.sqrt(tx*tx+ty*ty);
+    if(d<18){
+      p.done=true;p.el.classList.add('done');
+      p.el.style.left=G.goalX+'px';p.el.style.top=G.goalY+'px';
+      G.arrived++;
+      g('prog-fill').style.width=(G.arrived/4*100)+'%';
+      toast(`${G.arrived}/4 抵達！`);vib(60);
+      if(G.arrived===4){G.done=true;vib([80,30,150]);setTimeout(finishScenario,600)}
+    }else{
+      const step=SPEED*dt;
+      p.x+=(tx/d)*step;p.y+=(ty/d)*step;
+      p.el.style.left=p.x+'px';p.el.style.top=p.y+'px';
+    }
+  });
+  G.persRafId=requestAnimationFrame(animPersons);
+}
+
+// ── BEGIN PLAY ────────────────────────────────────────────
+function beginPlay(){
+  g('brief').classList.add('hidden');
+  G.startT=performance.now();G.elapsed=0;
+  G.timerId=setInterval(()=>{
+    G.elapsed=(performance.now()-G.startT)/1000;
+    g('h-tmr').textContent=G.elapsed.toFixed(1)+'s';
+  },100);
+  if(G.scn===3){G.lastT=performance.now();animPersons()}
+}
+
+// ── DRAW LOOP ─────────────────────────────────────────────
+function drawLoop(){
+  const cv=g('cv');const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  const L=LIGHTS[G.light||'flashlight'];
+  const on=isLightOn();
+  const cx=lightX(),cy=lightY();
+
+  ctx.clearRect(0,0,W,H);
+
+  // Lantern pre-placement: near-total darkness + faint finger glow
+  if(G.light==='lantern'&&G.lanternPrePlace){
+    ctx.fillStyle='rgba(0,0,0,.997)';ctx.fillRect(0,0,W,H);
+    if(G.fingerDown){
+      ctx.save();ctx.globalCompositeOperation='destination-out';
+      const fg=ctx.createRadialGradient(G.tx,G.ty,0,G.tx,G.ty,30);
+      fg.addColorStop(0,'rgba(0,0,0,.5)');fg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=fg;ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
+    document.querySelectorAll('.obj').forEach(o=>o.classList.remove('lit'));
+    G.rafId=requestAnimationFrame(drawLoop);return;
+  }
+
+  if(!on){
+    // Flashlight off: complete darkness
+    ctx.fillStyle='rgba(0,0,0,.995)';ctx.fillRect(0,0,W,H);
+    // update lit class (all dark)
+    document.querySelectorAll('.obj').forEach(o=>o.classList.remove('lit'));
+    G.rafId=requestAnimationFrame(drawLoop);return;
+  }
+
+  // Dark overlay
+  ctx.fillStyle=`rgba(0,0,0,${L.dim})`;ctx.fillRect(0,0,W,H);
+
+  // Punch out light circle
+  ctx.save();ctx.globalCompositeOperation='destination-out';
+  const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,L.r);
+  grd.addColorStop(0,'rgba(0,0,0,1)');
+  grd.addColorStop(.6,'rgba(0,0,0,.97)');
+  grd.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+  ctx.restore();
+
+  // Warm tint for lantern
+  if(G.light==='lantern'){
+    ctx.save();
+    const wg=ctx.createRadialGradient(cx,cy,0,cx,cy,L.r);
+    wg.addColorStop(0,'rgba(255,150,30,.08)');
+    wg.addColorStop(.65,'rgba(255,100,10,.04)');
+    wg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=wg;ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
+  // Update .lit on objects
+  document.querySelectorAll('.obj').forEach(obj=>{
+    const ox=parseFloat(obj.style.left),oy=parseFloat(obj.style.top);
+    obj.classList.toggle('lit',Math.sqrt((ox-cx)**2+(oy-cy)**2)<L.r*.93);
+  });
+
+  // Lantern cooldown ring + countdown number
+  if(G.light==='lantern'){
+    const now=performance.now(),rem=G.lanternCooldownEnd-now;
+    if(rem>0){
+      const pct=rem/5000;
+      ctx.save();
+      ctx.strokeStyle='rgba(255,178,56,0.85)';ctx.lineWidth=5;ctx.lineCap='round';
+      ctx.beginPath();ctx.arc(cx,cy,L.r-18,-Math.PI/2,-Math.PI/2+pct*2*Math.PI);ctx.stroke();
+      ctx.fillStyle='rgba(255,255,200,.95)';ctx.font='bold 34px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(Math.ceil(rem/1000),cx,cy);
+      ctx.restore();
+    }
+  }
+
+  G.rafId=requestAnimationFrame(drawLoop);
+}
+
+// ── INTERACTION CHECK ─────────────────────────────────────
+function checkLit(ox,oy){
+  if(!isLightOn())return false;
+  const L=LIGHTS[G.light];
+  return Math.sqrt((ox-lightX())**2+(oy-lightY())**2)<L.r;
+}
+
+// ── INPUT ─────────────────────────────────────────────────
+function updatePos(cx,cy){
+  const r=g('wrap').getBoundingClientRect();
+  G.tx=cx-r.left;G.ty=cy-r.top;
+  if(G.light==='lantern'&&performance.now()>=G.lanternCooldownEnd&&G.fingerDown){
+    G.lanternX=G.tx;G.lanternY=G.ty;
+  }
+}
+const scene=g('scene');
+scene.addEventListener('touchstart',e=>{
+  G.fingerDown=true;G.activeTouches=e.touches.length;
+  updatePos(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:true});
+scene.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  G.fingerDown=true;G.activeTouches=e.touches.length;
+  updatePos(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:false});
+scene.addEventListener('touchend',e=>{
+  G.activeTouches=e.touches.length;
+  if(e.touches.length===0){
+    G.fingerDown=false;
+    if(G.light==='lantern'&&G.lanternPrePlace){
+      // First placement: exit darkness mode
+      G.lanternPrePlace=false;
+      g('scene').classList.remove('pre-place');
+      g('instr').textContent='拖動露營燈　放開後等5秒才能再移動';
+      G.lanternCooldownEnd=performance.now()+5000;
+      vib(60);
+      setTimeout(()=>{if(!G.done)toast('可以移動了！')},5000);
+    } else if(G.light==='lantern'&&performance.now()>=G.lanternCooldownEnd){
+      G.lanternCooldownEnd=performance.now()+5000;
+      vib(30);
+      setTimeout(()=>{if(!G.done)toast('可以移動了！')},5000);
+    }
+  }
+  else{updatePos(e.touches[0].clientX,e.touches[0].clientY);}
+},{passive:true});
+// desktop fallback
+scene.addEventListener('mousedown',e=>{G.fingerDown=true;updatePos(e.clientX,e.clientY)});
+scene.addEventListener('mousemove',e=>{if(G.fingerDown||LIGHTS[G.light||'flashlight'].alwaysOn)updatePos(e.clientX,e.clientY)});
+scene.addEventListener('mouseup',()=>{
+  G.fingerDown=false;
+  if(G.light==='lantern'&&G.lanternPrePlace){
+    G.lanternPrePlace=false;
+    g('scene').classList.remove('pre-place');
+    g('instr').textContent='拖動露營燈　放開後等5秒才能再移動';
+    G.lanternCooldownEnd=performance.now()+5000;
+    setTimeout(()=>{if(!G.done)toast('可以移動了！')},5000);
+  } else if(G.light==='lantern'&&performance.now()>=G.lanternCooldownEnd){
+    G.lanternCooldownEnd=performance.now()+5000;
+    setTimeout(()=>{if(!G.done)toast('可以移動了！')},5000);
+  }
+});
+
+// ── EXIT MENU ─────────────────────────────────────────────
+function showExit(){g('exit-menu').classList.add('on')}
+function hideExit(){g('exit-menu').classList.remove('on')}
+function giveUp(){
+  G.done=true;G.gaveUp=true;
+  clearInterval(G.timerId);
+  cancelAnimationFrame(G.rafId);
+  cancelAnimationFrame(G.persRafId);
+  G.scores.push(G.elapsed);
+  renderResult(G.scn,G.elapsed,true);
+  showScr('s-result');
+}
+
+// ── FINISH & RESULT ───────────────────────────────────────
+function finishScenario(){
+  clearInterval(G.timerId);
+  cancelAnimationFrame(G.rafId);
+  cancelAnimationFrame(G.persRafId);
+  G.scores.push(G.elapsed);
+  renderResult(G.scn,G.elapsed,false);
+  showScr('s-result');
+}
+function renderResult(n,t,gaveUp){
+  const titles=['','第一關完成！⚡','第二關完成！⚡','第三關完成！⚡'];
+  g('r-ttl').textContent=gaveUp?`第${n}關 — 未完成`:(titles[n]);
+  g('r-time').innerHTML=gaveUp?'<b>放棄了這關</b>':`完成時間：<b>${t.toFixed(1)}s</b>`;
+  const ss=speedStars(n,t,gaveUp);G.starScores[n]=ss;
+  g('r-speed').innerHTML=renderSpeedStars(n,ss);
+  const tools=['flashlight','headlamp','lantern'];
+  const names={flashlight:'手電筒',headlamp:'頭燈',lantern:'露營燈'};
+  const icons={flashlight:'🔦',headlamp:'🤿',lantern:'💡'};
+  g('r-ratings').innerHTML=tools.map(lt=>`
+    <div class="rtool${lt===G.light?' you':''}">
+      <div class="ri">${icons[lt]}</div>
+      <div class="rn">${names[lt]}</div>
+      <div class="rs">${stars(RATINGS[n][lt])}</div>
+      ${lt===G.light?'<div class="ry">← 你選的</div>':''}
+    </div>`).join('');
+  g('r-insight').innerHTML=INSIGHTS[n][G.light];
+  g('btn-next').textContent=n<3?`第${n+1}關 →`:'看總結 →';
+}
+function nextScene(){
+  if(G.scn<3){loadScenario(G.scn+1);showScr('s-game')}
+  else{renderFinal();showScr('s-final')}
+}
+function renderFinal(){
+  ['flashlight','headlamp','lantern'].forEach(lt=>g(`tr-${lt}`).classList.toggle('you-row',lt===G.light));
+  const total=[1,2,3].reduce((a,n)=>a+(G.starScores[n]||0),0);
+  const msg=total===9?'完美通關！你是光之呼吸大師！':total>=7?'非常厲害，只差一點點！':total>=5?'不錯！繼續練習！':'多玩幾次就更快了！';
+  g('f-stars').innerHTML=`
+    <div class="spd-lbl">三關總成績</div>
+    <div class="f-spd-val">${[1,2,3,4,5,6,7,8,9].map(i=>`<span class="${i<=total?'sg':'se'}">★</span>`).join('')}</div>
+    <div class="f-spd-sub">${total} / 9 星　${msg}</div>`;
+}
+function reset(){
+  G.light=null;G.scn=0;G.scores=[];G.starScores=[];
+  if(selCard){selCard.classList.remove('sel');selCard=null}
+  g('btn-start').style.opacity='.35';g('btn-start').style.pointerEvents='none';
+  showScr('s-intro');
+}
+
+window.addEventListener('resize',()=>{const cv=g('cv'),w=g('wrap');cv.width=w.offsetWidth;cv.height=w.offsetHeight});
+</script>
+</body>
+</html>

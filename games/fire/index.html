@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>炎之呼吸：糧食生存挑戰</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Noto Sans TC', sans-serif; background-color: #111827; }
+  .survival-bar-bg { background-color: #374151; }
+  .survival-bar-fill { height: 100%; transition: width 0.5s ease-in-out; border-radius: 9999px; }
+  .bar-red { background-color: #EF4444; }
+  .bar-green { background-color: #22C55E; }
+  .bar-purple { background-color: #8B5CF6; }
+  .bar-blue { background-color: #3B82F6; }
+  .bar-orange { background-color: #F97316; }
+  .flame-spent { filter: grayscale(1) brightness(.35); transform: scale(.75); opacity: .5; display: inline-block; }
+  .price-up { color: #f97316; }
+  #shop-screen { padding-top: 90px; padding-bottom: 100px; }
+  #day-screen  { padding-top: 200px; padding-bottom: 100px; }
+  @keyframes warmPulse { 0%{opacity:.8} 100%{opacity:1} }
+  body.warm-mode::before {
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background:radial-gradient(circle,rgba(255,160,60,.15) 0%,rgba(255,140,0,.05) 80%);
+    z-index:5; mix-blend-mode:screen; animation:warmPulse 4s infinite alternate;
+  }
+  .food-card.selected { border-color: #F97316 !important; background-color: #1c1108 !important; }
+  .veggie-card.selected { border-color: #22C55E !important; background-color: #0a1a0a !important; }
+</style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+<div class="max-w-xl mx-auto">
+
+<!-- ══ INTRO ══ -->
+<div id="intro-screen" class="flex flex-col items-center justify-center min-h-screen text-center p-6">
+  <div class="text-7xl mb-6">🔥</div>
+  <div class="text-sm font-bold text-orange-400 tracking-widest mb-3">鬼殺隊 · 炎之試煉</div>
+  <h1 class="text-5xl font-black text-white mb-3">炎之呼吸</h1>
+  <p class="text-xl text-gray-400 mb-8">火焰提供熱食與溫暖</p>
+  <div class="bg-gray-800 p-6 rounded-xl w-full mb-8 text-left">
+    <p class="text-lg text-gray-300 leading-relaxed mb-6">戰爭爆發了！你有 <span class="text-orange-400 font-bold">$1,000</span> 採購糧食，要讓家人撐過 <span class="text-orange-400 font-bold">3 天 × 三餐</span>。可以跳過某一餐，但飽足會下降。注意——每買一樣東西，其他商品可能漲價！</p>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="bg-gray-900 p-4 rounded-xl text-center">
+        <div class="text-3xl mb-2">💰</div>
+        <div class="text-sm text-gray-400 mb-1">預算</div>
+        <div class="font-bold text-orange-400">$1,000</div>
+      </div>
+      <div class="bg-gray-900 p-4 rounded-xl text-center">
+        <div class="text-3xl mb-2">📅</div>
+        <div class="text-sm text-gray-400 mb-1">生存天數</div>
+        <div class="font-bold text-orange-400">3天 9餐</div>
+      </div>
+      <div class="bg-gray-900 p-4 rounded-xl text-center">
+        <div class="text-3xl mb-2">🔥</div>
+        <div class="text-sm text-gray-400 mb-1">瓦斯罐</div>
+        <div class="font-bold text-orange-400">最多 3 罐</div>
+      </div>
+    </div>
+  </div>
+  <button id="start-btn" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-5 text-2xl rounded-xl shadow-lg transition duration-300">開始採購 →</button>
+</div>
+
+<!-- ══ SHOP ══ -->
+<div id="shop-screen" class="hidden">
+  <!-- Sticky header -->
+  <div class="fixed top-0 left-0 right-0 bg-gray-900 border-b-2 border-gray-700 shadow-2xl z-20 max-w-xl mx-auto p-4">
+    <div class="flex items-center justify-between">
+      <span class="text-lg text-gray-400 font-bold">剩餘預算</span>
+      <span id="budget-display" class="text-3xl font-black text-orange-400">$1,000</span>
+      <span class="text-lg text-gray-400 font-bold">已購入</span>
+    </div>
+    <div class="mt-2 text-sm text-gray-500 text-center" id="cart-summary">尚未選購任何物品</div>
+  </div>
+
+  <main class="px-4">
+    <h2 class="text-2xl font-bold text-gray-300 text-center pb-3 border-b border-gray-700 mb-4">選擇要採購的物品：</h2>
+    <p class="text-sm text-orange-400 text-center mb-6">⚠️ 每次購買後，其他商品可能隨機漲價（反映戰時物資緊缺）</p>
+    <div id="shop-cards" class="space-y-4"></div>
+  </main>
+
+  <button id="shop-done-btn" class="fixed bottom-0 left-0 right-0 max-w-xl mx-auto bg-orange-600 hover:bg-orange-500 text-white font-bold py-5 text-2xl shadow-2xl border-t-2 border-orange-400 transition z-20">
+    完成採購，開始生存 →
+  </button>
+</div>
+
+<!-- ══ DAY ══ -->
+<div id="day-screen" class="hidden">
+  <!-- Sticky header -->
+  <div class="fixed top-0 left-0 right-0 bg-gray-900 border-b-2 border-gray-700 shadow-2xl z-20 max-w-xl mx-auto p-4">
+    <div class="flex justify-between items-center mb-3">
+      <span id="day-title" class="text-2xl font-bold text-orange-400">第1天 早餐</span>
+      <div id="gas-display" class="flex gap-1 items-center"></div>
+      <span class="text-sm text-gray-400">瓦斯</span>
+    </div>
+    <div class="grid grid-cols-3 gap-2">
+      <div class="flex items-center gap-1">
+        <span class="text-red-400 font-bold text-sm w-8 shrink-0">飽足</span>
+        <div class="flex-grow survival-bar-bg rounded-full h-4">
+          <div id="bar-fullness" class="survival-bar-fill bar-red" style="width:70%"></div>
+        </div>
+        <span id="val-fullness" class="text-sm w-8 text-right">70%</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <span class="text-purple-400 font-bold text-sm w-8 shrink-0">心情</span>
+        <div class="flex-grow survival-bar-bg rounded-full h-4">
+          <div id="bar-mood" class="survival-bar-fill bar-purple" style="width:60%"></div>
+        </div>
+        <span id="val-mood" class="text-sm w-8 text-right">60%</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <span class="text-blue-400 font-bold text-sm w-8 shrink-0">健康</span>
+        <div class="flex-grow survival-bar-bg rounded-full h-4">
+          <div id="bar-health" class="survival-bar-fill bar-blue" style="width:80%"></div>
+        </div>
+        <span id="val-health" class="text-sm w-8 text-right">80%</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="px-4">
+
+    <!-- Phase: selection -->
+    <div id="meal-select">
+      <div id="day-report" class="bg-gray-800 rounded-xl shadow-2xl mb-6 overflow-hidden border border-gray-600">
+        <div id="day-report-text" class="p-5 text-lg leading-loose text-gray-200"></div>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-300 text-center pb-3 border-b border-gray-700 mb-4">這一餐吃什麼？</h2>
+      <div id="food-cards" class="space-y-4 mb-4"></div>
+      <div id="veggie-section" class="hidden mb-4">
+        <h3 class="text-lg font-bold text-green-400 mb-3">🥦 加菜補充健康（可選）</h3>
+        <div id="veggie-card" class="veggie-card bg-gray-800 p-5 rounded-xl border-2 border-gray-700 cursor-pointer">
+          <div class="flex justify-between items-center">
+            <div>
+              <h4 class="text-xl font-bold">🥦 加乾燥蔬菜</h4>
+              <p class="text-gray-400 text-base">健康 +20%，心情 +10%</p>
+            </div>
+            <div id="veggie-qty-badge" class="text-orange-400 font-bold text-sm"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase: result -->
+    <div id="meal-result" class="hidden py-6">
+      <div id="meal-result-content"></div>
+    </div>
+
+  </main>
+
+  <!-- CTA: confirm (selection phase) -->
+  <button id="day-confirm-btn" onclick="confirmMeal()" class="fixed bottom-0 left-0 right-0 max-w-xl mx-auto bg-orange-600 active:bg-orange-700 text-white font-bold py-5 text-2xl shadow-2xl border-t-2 border-orange-400 z-20">
+    確認餐點 →
+  </button>
+  <!-- CTA: next (result phase) -->
+  <button id="meal-next-btn" class="hidden fixed bottom-0 left-0 right-0 max-w-xl mx-auto bg-orange-500 active:bg-orange-600 text-white font-bold py-5 text-2xl shadow-2xl border-t-2 border-orange-300 z-20">
+    下一餐 →
+  </button>
+</div>
+
+<!-- ══ FINAL ══ -->
+<div id="final-screen" class="hidden">
+  <div class="p-6 pt-10 pb-24">
+    <div class="text-center mb-8">
+      <div class="text-6xl mb-4">🔥</div>
+      <h1 id="final-title" class="text-4xl font-bold text-orange-400 mb-2">炎之呼吸奧義皆傳！</h1>
+      <p id="final-sub" class="text-gray-400"></p>
+    </div>
+    <div id="final-feedback" class="bg-gray-800 rounded-xl p-6 mb-6 border-l-8 border-orange-400 text-lg text-gray-200 leading-relaxed"></div>
+    <div class="bg-gray-800 rounded-xl p-6 mb-6 text-center">
+      <p class="text-sm text-orange-400 font-bold tracking-widest mb-3">生存評分</p>
+      <div id="f-stars" class="text-5xl mb-3 tracking-widest"></div>
+      <p id="f-stars-msg" class="text-gray-300 text-lg"></p>
+    </div>
+    <div class="bg-gray-800 rounded-xl p-5 mb-6">
+      <h3 class="text-orange-400 font-bold text-lg mb-4">三天九餐紀錄</h3>
+      <div id="day-log" class="space-y-3"></div>
+    </div>
+    <div class="bg-gray-800 rounded-xl p-5 mb-8 text-sm text-gray-300 leading-relaxed">
+      <h3 class="text-orange-400 font-bold text-base mb-3">💡 戰時糧食知識</h3>
+      <div id="food-insights"></div>
+    </div>
+    <div class="flex gap-4">
+      <button id="reset-btn" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 text-xl rounded-xl transition">再玩一次</button>
+      <button onclick="location.reload()" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 text-xl rounded-xl transition">再試一次</button>
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────
+const FOODS = [
+  { id:'energy_bar', name:'能量棒',  icon:'🧱', basePrice:70,  fullness:15, mood:3,  health:0,  needsGas:false, desc:'快速補充熱量，但口感單調（飽足+15%）', insight:'能量棒適合緊急疏散時快速補充熱量，但缺乏飽足感，長期依賴會讓心理更疲憊。', maxBuy:10 },
+  { id:'canned',     name:'罐頭食品',icon:'🥫', basePrice:100, fullness:22, mood:12, health:3,  needsGas:false, desc:'冷吃熱吃都可以，方便安全（飽足+22%）', insight:'罐頭是最佳儲備首選，2-5年保存期。注意凹陷、膨脹的罐頭要立即丟棄！', maxBuy:10 },
+  { id:'noodle',     name:'泡麵',    icon:'🍜', basePrice:90,  fullness:28, mood:22, health:0,  needsGas:true,  desc:'熱騰騰的泡麵，士氣大加分（飽足+28%）', insight:'泡麵快速方便，熱食能大幅提升士氣。但油包會氧化，儲備需每6-12個月替換。', maxBuy:10 },
+  { id:'rice',       name:'白米飯',  icon:'🍚', basePrice:160, fullness:38, mood:18, health:3,  needsGas:true,  desc:'最飽、最有家的感覺（飽足+38%）', insight:'白米搭配密封罐和脫氧劑可儲存1-20年！熱騰騰的白飯是家人士氣的重要來源。', maxBuy:10 },
+  { id:'instant_rice',name:'沖泡飯',icon:'🍱', basePrice:160, fullness:32, mood:18, health:3,  needsGas:false, desc:'加熱水就能吃，疏散也能用（飽足+32%）', insight:'乾燥飯只需熱水就能食用，是疏散時的絕佳選擇，保存期2-5年。', maxBuy:10 },
+  { id:'veggie',     name:'乾燥蔬菜',icon:'🥦', basePrice:80,  fullness:6,  mood:6,  health:16, needsGas:false, desc:'維持健康的關鍵，補充維生素（健康+16%）', insight:'戰時飲食容易缺乏蔬菜！乾燥蔬菜是被嚴重忽視的儲備，維持身體健康不可少。', maxBuy:10 },
+];
+const GAS = { id:'gas_can', name:'瓦斯罐', icon:'🔥', basePrice:150, gasUnits:3, desc:'每罐提供3格燃料，煮食必備', maxBuy:3 };
+
+const BUDGET = 1000;
+const DAYS = 3;
+const MEALS_PER_DAY = 3;
+const MEAL_NAMES = ['早餐','午餐','晚餐'];
+// Passive stat drain applied at the START of every meal slot (except the very first)
+const PASSIVE = { fullness: 20, mood: 8, health: 2 };
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let S = {};
+
+function defaultState() {
+  const prices = {};
+  const baseP = {};
+  FOODS.forEach(f => { prices[f.id]=f.basePrice; baseP[f.id]=f.basePrice; });
+  prices['gas_can']=GAS.basePrice; baseP['gas_can']=GAS.basePrice;
+  return {
+    budget: BUDGET,
+    prices, baseP,
+    inflated: {},
+    inv: {}, // food id → qty
+    gasTotal: 0, gasUsed: 0,
+    stats: { fullness:70, mood:60, health:80 },
+    day: 1, meal: 1,
+    lastEaten: null,
+    consecutiveSkips: 0,
+    dayLogs: [],
+    moodSum: 0,
+    mealCount: 0,
+    phase: 'shop',
+    selectedFood: null,
+    useVeggie: false,
+  };
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+function showScreen(id){['intro-screen','shop-screen','day-screen','final-screen'].forEach(s=>$(s).classList.add('hidden'));$(id).classList.remove('hidden');}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function starHtml(n){return[1,2,3,4,5].map(i=>`<span style="color:${i<=n?'#FBBF24':'#374151'}">★</span>`).join('');}
+
+// ── INFLATION ──────────────────────────────────────────────────────────────
+function applyInflation(boughtId) {
+  const allIds = FOODS.map(f=>f.id).concat(['gas_can']);
+  S.inflated = {};
+  allIds.forEach(id => {
+    if(id === boughtId) return;
+    if(Math.random() < 0.5) {
+      const pct = 0.03 + Math.random()*0.05; // 3-8%
+      const cap = Math.round(S.baseP[id] * 1.4);
+      const newP = Math.min(Math.round(S.prices[id]*(1+pct)/5)*5, cap);
+      if(newP > S.prices[id]) { S.prices[id]=newP; S.inflated[id]=true; }
+    }
+  });
+}
+
+// ── SHOP ──────────────────────────────────────────────────────────────────
+function buildShopCards() {
+  const container = $('shop-cards');
+  container.innerHTML = '';
+
+  // Gas can card
+  const gasDiv = document.createElement('div');
+  gasDiv.id = 'shop-card-gas_can';
+  gasDiv.className = 'bg-gray-800 p-5 rounded-xl border-l-4 border-orange-500 border border-gray-700';
+  container.appendChild(gasDiv);
+
+  FOODS.forEach(f => {
+    const div = document.createElement('div');
+    div.id = 'shop-card-'+f.id;
+    const borderColor = f.needsGas ? 'border-amber-500' : f.id==='veggie' ? 'border-green-500' : 'border-blue-500';
+    div.className = `bg-gray-800 p-5 rounded-xl border-l-4 ${borderColor} border border-gray-700`;
+    container.appendChild(div);
+  });
+
+  renderShopCards();
+}
+
+function renderShopCards() {
+  // Gas can
+  const gasQty = S.inv['gas_can'] || 0;
+  const gasP = S.prices['gas_can'];
+  const gasInflated = S.inflated['gas_can'];
+  const gasCard = $('shop-card-gas_can');
+  if(gasCard) {
+    const canBuyGas = S.budget >= gasP && gasQty < GAS.maxBuy;
+    gasCard.innerHTML = `
+      <div class="flex justify-between items-start mb-2">
+        <h4 class="text-2xl font-bold">${GAS.icon} ${GAS.name}</h4>
+        <span class="text-lg font-bold ${gasInflated?'text-orange-400':'text-yellow-400'} bg-gray-900 px-3 py-1 rounded">
+          ${gasInflated?'🔺':''} $${gasP}
+        </span>
+      </div>
+      <p class="text-gray-300 mb-3">${GAS.desc}</p>
+      <div class="flex items-center justify-between">
+        <span class="text-gray-400 text-sm">已購入 ${gasQty}/${GAS.maxBuy} 罐 (${gasQty*3} 格燃料)</span>
+        <button onclick="buyItem('gas_can')" class="font-bold py-3 px-6 rounded-lg text-lg transition ${canBuyGas?'bg-orange-600 hover:bg-orange-500 text-white':'bg-gray-700 text-gray-500 cursor-not-allowed'}" ${canBuyGas?'':'disabled'}>
+          ${gasQty>=GAS.maxBuy?'已達上限':S.budget<gasP?'預算不足':'購買'}
+        </button>
+      </div>`;
+  }
+
+  FOODS.forEach(f => {
+    const qty = S.inv[f.id] || 0;
+    const p = S.prices[f.id];
+    const inflated = S.inflated[f.id];
+    const canBuy = S.budget >= p;
+    const card = $('shop-card-'+f.id);
+    if(!card) return;
+
+    let effects = `<span class="text-red-400 font-bold mr-3">飽足+${f.fullness}%</span>`;
+    effects += `<span class="text-purple-400 font-bold mr-3">心情+${f.mood}%</span>`;
+    if(f.health) effects += `<span class="text-blue-400 font-bold mr-3">健康+${f.health}%</span>`;
+    if(f.needsGas) effects += `<span class="text-amber-400 font-bold">需要1格瓦斯</span>`;
+
+    card.innerHTML = `
+      <div class="flex justify-between items-start mb-2">
+        <h4 class="text-2xl font-bold">${f.icon} ${f.name}</h4>
+        <span class="text-lg font-bold ${inflated?'text-orange-400':'text-yellow-400'} bg-gray-900 px-3 py-1 rounded">
+          ${inflated?'🔺':''} $${p}
+        </span>
+      </div>
+      <p class="text-gray-300 mb-2">${f.desc}</p>
+      <div class="flex flex-wrap gap-1 mb-3">${effects}</div>
+      <div class="flex items-center justify-between">
+        <span class="text-gray-400 text-sm">已購入 ${qty} 份</span>
+        <button onclick="buyItem('${f.id}')" class="font-bold py-3 px-6 rounded-lg text-lg transition ${canBuy?'bg-green-600 hover:bg-green-500 text-white':'bg-gray-700 text-gray-500 cursor-not-allowed'}" ${canBuy?'':'disabled'}>
+          ${canBuy?'購買':'預算不足'}
+        </button>
+      </div>`;
+  });
+
+  $('budget-display').textContent = '$'+S.budget;
+  updateCartSummary();
+}
+
+function updateCartSummary() {
+  const items = [];
+  const gasQty = S.inv['gas_can'] || 0;
+  if(gasQty) items.push(`🔥${gasQty}罐`);
+  FOODS.forEach(f => { const q=S.inv[f.id]||0; if(q) items.push(`${f.icon}${q}`); });
+  $('cart-summary').textContent = items.length ? items.join(' · ') : '尚未選購任何物品';
+}
+
+function buyItem(id) {
+  const isGas = id === 'gas_can';
+  const p = S.prices[id];
+  if(S.budget < p) return;
+  if(isGas && (S.inv['gas_can']||0) >= GAS.maxBuy) return;
+
+  S.budget -= p;
+  S.inv[id] = (S.inv[id]||0) + 1;
+  if(isGas) S.gasTotal += GAS.gasUnits;
+
+  applyInflation(id);
+  renderShopCards();
+  document.body.classList.remove('warm-mode');
+}
+
+function shopDone() {
+  const totalFood = FOODS.filter(f=>f.id!=='veggie').reduce((a,f)=>(S.inv[f.id]||0)+a, 0);
+  if(totalFood < 1) { alert('至少要買一樣食物！'); return; }
+  S.phase = 'day';
+  showScreen('day-screen');
+  loadMeal(1, 1);
+}
+
+// ── MEALS ─────────────────────────────────────────────────────────────────
+function loadMeal(day, meal) {
+  S.day = day;
+  S.meal = meal;
+  S.selectedFood = null;
+  S.useVeggie = false;
+  document.body.classList.remove('warm-mode');
+
+  // Passive decay every slot except the very first meal
+  if(!(day === 1 && meal === 1)) {
+    S.stats.fullness = clamp(S.stats.fullness - PASSIVE.fullness, 0, 100);
+    S.stats.mood     = clamp(S.stats.mood     - PASSIVE.mood,     0, 100);
+    S.stats.health   = clamp(S.stats.health   - PASSIVE.health,   0, 100);
+    updateStatsUI();
+    if(S.stats.fullness <= 0 || S.stats.mood <= 0 || S.stats.health <= 0) {
+      showFinal(false);
+      return;
+    }
+  }
+
+  $('day-title').textContent = `第${day}天 ${MEAL_NAMES[meal-1]}`;
+  updateGasUI();
+  $('day-report-text').innerHTML = getMealStory(day, meal);
+  buildFoodCards();
+  showMealPhase('select');
+  updateDayConfirmBtn();
+}
+
+function getMealStory(day, meal) {
+  const stories = {
+    '1-1':'戰爭爆發第一天，早晨，大家還算冷靜。<span class="text-orange-400">為家人準備早餐吧！</span>',
+    '1-2':'第一天午後，炮聲遠遠傳來。<span class="text-gray-300">先吃飽，才有力氣應對接下來的狀況。</span>',
+    '1-3':'夜幕降臨，第一天接近尾聲。<span class="text-purple-400">一頓好晚餐能讓大家安心入睡。</span>',
+    '2-1':'第二天早晨，物資開始緊張了。<span class="text-gray-300">鄰居們都在計算存糧。</span>',
+    '2-2':'第二天中午，家人們有些疲憊了。<span class="text-purple-400">吃好一點，維持士氣！</span>',
+    '2-3':'第二天傍晚，外面仍有砲聲。<span class="text-red-400">食物的選擇影響著每個人的精神狀態。</span>',
+    '3-1':'第三天早晨，最後衝刺！<span class="text-green-400">再撐一天就能等到救援。</span>',
+    '3-2':'第三天中午，家人們眼神堅定。<span class="text-orange-400">把握每一餐，不要放棄！</span>',
+    '3-3':'最後一餐了！<span class="text-green-400">撐過這一餐，你就成功了！</span>',
+  };
+  return `<p class="text-gray-200 text-lg">${stories[day+'-'+meal]||''}</p>`;
+}
+
+function showMealPhase(phase) {
+  $('meal-select').classList.toggle('hidden', phase !== 'select');
+  $('meal-result').classList.toggle('hidden', phase !== 'result');
+  $('day-confirm-btn').classList.toggle('hidden', phase !== 'select');
+  $('meal-next-btn').classList.toggle('hidden', phase !== 'result');
+}
+
+function buildFoodCards() {
+  const container = $('food-cards');
+  container.innerHTML = '';
+
+  const gasRemaining = S.gasTotal - S.gasUsed;
+  const mainFoods = FOODS.filter(f => f.id !== 'veggie');
+  let hasAnyFood = false;
+
+  mainFoods.forEach(f => {
+    const qty = S.inv[f.id] || 0;
+    if(qty <= 0) return;
+    if(f.id === 'veggie') return;
+    hasAnyFood = true;
+    const needsGasOk = !f.needsGas || gasRemaining > 0;
+
+    const borderColor = f.needsGas ? 'border-amber-500' : 'border-blue-500';
+    const div = document.createElement('div');
+    div.id = 'food-card-'+f.id;
+    div.className = `food-card bg-gray-800 p-5 rounded-xl border-2 ${borderColor} border-opacity-40 border cursor-pointer transition`;
+    if(!needsGasOk) div.classList.add('opacity-40');
+
+    let effects = `<span class="text-red-400 font-bold mr-2">飽足+${f.fullness}%</span>`;
+    effects += `<span class="text-purple-400 font-bold mr-2">心情+${f.mood}%</span>`;
+    if(f.health) effects += `<span class="text-blue-400 font-bold mr-2">健康+${f.health}%</span>`;
+    const gasTag = f.needsGas ? `<span class="text-amber-400 text-sm">🔥 需要1格瓦斯${!needsGasOk?' — 燃料不足！':''}</span>` : '';
+
+    div.innerHTML = `
+      <div class="flex justify-between items-start mb-2">
+        <h4 class="text-2xl font-bold">${f.icon} ${f.name}</h4>
+        <span class="text-sm bg-gray-900 px-3 py-1 rounded text-gray-400">剩餘 ${qty} 份</span>
+      </div>
+      <p class="text-gray-400 mb-3">${f.desc}</p>
+      <div class="flex flex-wrap gap-1 mb-2">${effects}</div>
+      ${gasTag}`;
+
+    if(needsGasOk) {
+      div.addEventListener('click', ()=>selectFood(f.id));
+    }
+    container.appendChild(div);
+  });
+
+  if(!hasAnyFood) {
+    container.innerHTML = '<div class="bg-red-900 border border-red-600 text-red-300 px-5 py-4 rounded-xl text-xl text-center">⚠️ 沒有食物了！</div>';
+  }
+
+  // Veggie section
+  const veggieQty = S.inv['veggie'] || 0;
+  const veggieSection = $('veggie-section');
+  if(veggieQty > 0) {
+    veggieSection.classList.remove('hidden');
+    $('veggie-qty-badge').textContent = `剩餘 ${veggieQty} 份`;
+    $('veggie-card').classList.remove('selected');
+    $('veggie-card').onclick = toggleVeggie;
+  } else {
+    veggieSection.classList.add('hidden');
+  }
+}
+
+function selectFood(id) {
+  S.selectedFood = id;
+  document.querySelectorAll('.food-card').forEach(c => c.classList.remove('selected'));
+  const card = $('food-card-'+id);
+  if(card) card.classList.add('selected');
+  if(id==='rice' || id==='noodle') document.body.classList.add('warm-mode');
+  else document.body.classList.remove('warm-mode');
+  updateDayConfirmBtn();
+}
+
+function toggleVeggie() {
+  S.useVeggie = !S.useVeggie;
+  const card = $('veggie-card');
+  card.classList.toggle('selected', S.useVeggie);
+}
+
+function updateDayConfirmBtn() {
+  const btn = $('day-confirm-btn');
+  btn.textContent = S.selectedFood ? '確認餐點 →' : '略過這一餐 →';
+}
+
+function updateGasUI() {
+  const rem = S.gasTotal - S.gasUsed;
+  const total = S.gasTotal;
+  const h = $('gas-display');
+  h.innerHTML = '';
+  for(let i=0;i<total;i++){
+    const s=document.createElement('span');
+    s.textContent='🔥';s.style.fontSize='1.4rem';
+    if(i>=rem)s.className='flame-spent';
+    h.appendChild(s);
+  }
+  if(total===0){
+    h.innerHTML='<span class="text-gray-600 text-sm">無瓦斯</span>';
+  }
+}
+
+function updateStatsUI() {
+  const st = S.stats;
+  ['fullness','mood','health'].forEach(k=>{
+    const v=clamp(st[k],0,100);
+    st[k]=v;
+    const bar=$('bar-'+k);
+    const val=$('val-'+k);
+    if(bar){bar.style.width=v+'%';bar.className='survival-bar-fill '+(v<40?'bar-red':(k==='fullness'?'bar-green':k==='mood'?'bar-purple':'bar-blue'));}
+    if(val)val.textContent=v+'%';
+  });
+}
+
+function confirmMeal() {
+  document.body.classList.remove('warm-mode');
+  const skipping = !S.selectedFood;
+  const statsBefore = { ...S.stats };
+  const deltas = { fullness: 0, mood: 0, health: 0 };
+  let fatigue = false;
+  let usedVeggie = false;
+  let eatenFood = null;
+
+  if(skipping) {
+    // Passive decay already applied in loadMeal; skip adds extra hunger pang
+    deltas.fullness = -10;
+    deltas.mood = -10;
+    S.consecutiveSkips++;
+    if(S.consecutiveSkips >= 2) {
+      deltas.health -= 8;
+    }
+    S.dayLogs.push({ day:S.day, meal:S.meal, food:null, fatigue:false, skipped:true, statsAfter:null });
+  } else {
+    S.consecutiveSkips = 0;
+    const f = FOODS.find(x=>x.id===S.selectedFood);
+    eatenFood = f;
+    S.inv[f.id]--;
+    if(f.needsGas) S.gasUsed++;
+
+    if(S.lastEaten === f.id) { deltas.mood -= 15; fatigue = true; }
+    S.lastEaten = f.id;
+
+    deltas.fullness += f.fullness;
+    deltas.mood += f.mood;
+    deltas.health += f.health;
+
+    if(S.useVeggie && (S.inv['veggie']||0) > 0) {
+      const vf = FOODS.find(x=>x.id==='veggie');
+      S.inv['veggie']--;
+      deltas.health += vf.health;
+      deltas.mood += vf.mood;
+      deltas.fullness += vf.fullness;
+      usedVeggie = true;
+    }
+
+    S.dayLogs.push({ day:S.day, meal:S.meal, food:f, usedVeggie, fatigue, skipped:false, statsAfter:null });
+  }
+
+  // Apply deltas
+  S.stats.fullness = clamp(S.stats.fullness + deltas.fullness, 0, 100);
+  S.stats.mood     = clamp(S.stats.mood     + deltas.mood,     0, 100);
+  S.stats.health   = clamp(S.stats.health   + deltas.health,   0, 100);
+  S.dayLogs[S.dayLogs.length-1].statsAfter = { ...S.stats };
+
+  updateStatsUI();
+  S.moodSum += S.stats.mood;
+  S.mealCount++;
+
+  // Show result panel
+  const mealName = MEAL_NAMES[S.meal-1];
+  const icon  = skipping ? '⏭' : eatenFood.icon;
+  const title = skipping ? `略過了${mealName}` : `吃了 ${eatenFood.name}`;
+
+  const deltaRow = (label, color, d, after) => {
+    if(d===0) return '';
+    const sign = d>0?'+':'';
+    return `<div class="flex justify-between items-center py-2.5 border-b border-gray-700 last:border-0">
+      <span class="${color} font-bold text-base">${label}</span>
+      <span class="text-gray-300">${sign}${d}% → <span class="font-bold text-white">${after}%</span></span>
+    </div>`;
+  };
+
+  let extras = '';
+  if(fatigue) extras += `<div class="mt-3 text-orange-400 text-sm text-center">⚠️ 連續吃一樣的東西，心情 -15%（飲食疲勞）</div>`;
+  if(S.consecutiveSkips>=2 && skipping) extras += `<div class="mt-3 text-red-400 text-sm text-center">😰 連續跳過餐點，健康 -10%</div>`;
+
+  const isFirst = S.day===1 && S.meal===1;
+  const passiveNote = isFirst ? '' : `
+    <div class="bg-gray-900/70 rounded-xl px-4 py-3 mb-3 text-sm text-gray-400">
+      ⏱ 飢餓消耗（已扣）飽足 -${PASSIVE.fullness}%・心情 -${PASSIVE.mood}%・健康 -${PASSIVE.health}%
+    </div>`;
+
+  $('meal-result-content').innerHTML = `
+    ${passiveNote}
+    <div class="bg-gray-800 rounded-2xl border border-gray-600 overflow-hidden mb-4">
+      <div class="text-center py-5 border-b border-gray-700">
+        <div class="text-5xl mb-2">${icon}</div>
+        <div class="text-xl font-bold text-white">${title}</div>
+      </div>
+      <div class="px-5 py-2">
+        ${deltaRow('飽足','text-red-400', deltas.fullness, S.stats.fullness)}
+        ${deltaRow('心情','text-purple-400', deltas.mood, S.stats.mood)}
+        ${deltaRow('健康','text-blue-400', deltas.health, S.stats.health)}
+      </div>
+    </div>
+    ${extras}
+  `;
+
+  showMealPhase('result');
+
+  const isGameOver = S.stats.fullness<=0 || S.stats.health<=0 || S.stats.mood<=0;
+  const isLastMeal = S.day===DAYS && S.meal===MEALS_PER_DAY;
+  const nextBtn = $('meal-next-btn');
+
+  if(isGameOver || isLastMeal) {
+    nextBtn.textContent = isGameOver ? '查看結果 💀' : '看結果 🎉';
+    nextBtn.onclick = () => showFinal(!isGameOver);
+  } else if(S.meal===MEALS_PER_DAY) {
+    nextBtn.textContent = `前往第${S.day+1}天 →`;
+    nextBtn.onclick = advanceMeal;
+  } else {
+    nextBtn.textContent = `下一餐 →`;
+    nextBtn.onclick = advanceMeal;
+  }
+}
+
+function advanceMeal() {
+  if(S.meal < MEALS_PER_DAY) {
+    loadMeal(S.day, S.meal+1);
+  } else {
+    loadMeal(S.day+1, 1);
+  }
+}
+
+// ── FINAL ─────────────────────────────────────────────────────────────────
+function showFinal(survived) {
+  document.body.classList.remove('warm-mode');
+  showScreen('final-screen');
+
+  const totalMeals = Math.max(S.mealCount, 1);
+  const avgMood = survived ? Math.round(S.moodSum / totalMeals) : 0;
+  const stars = survived ? (avgMood>=80?5:avgMood>=65?4:avgMood>=50?3:avgMood>=35?2:1) : 0;
+  const msgs = {5:'每天吃得多樣又營養，士氣滿分！',4:'安排得不錯！家人精神還算好。',3:'勉強撐過去了，飲食可以更多樣。',2:'飲食比較單調，家人士氣下滑。',1:'幾乎只能填飽肚子，士氣很低落。'};
+
+  if(!survived){
+    const reason = S.stats.fullness<=0?'飽足度歸零': S.stats.health<=0?'健康歸零':'士氣崩潰';
+    $('final-title').textContent='挑戰失敗';
+    $('final-title').classList.replace('text-orange-400','text-red-500');
+    $('final-sub').textContent=`因為${reason}，家人撐不下去了。`;
+    $('final-feedback').innerHTML=`<p class="text-red-400 font-bold text-xl">第 ${S.day} 天，因為${reason}，家人失去了求生意志……</p>`;
+    $('final-feedback').classList.replace('border-orange-400','border-red-500');
+    $('f-stars').innerHTML=starHtml(0)+'<span class="text-gray-600 text-3xl"> ☆☆☆☆☆</span>';
+    $('f-stars-msg').textContent='下次提前規劃糧食！';
+  } else {
+    $('final-title').textContent='炎之呼吸奧義皆傳！';
+    $('final-sub').textContent='你帶領家人撐過了3天9餐！';
+    $('final-feedback').innerHTML=`<p class="text-green-400 text-xl font-bold mb-2">🎉 成功度過5天！</p><p class="text-gray-300">平均心情：<span class="text-purple-400 font-bold">${avgMood}%</span>　最終評分：${stars}星</p>`;
+    $('f-stars').innerHTML=starHtml(stars);
+    $('f-stars-msg').textContent=msgs[stars]||'';
+  }
+
+  // Day log
+  $('day-log').innerHTML = S.dayLogs.map(l=>`
+    <div class="flex items-center justify-between p-3 bg-gray-900 rounded-lg text-sm">
+      <span class="text-gray-400 font-bold w-16 shrink-0">第${l.day}天<br>${MEAL_NAMES[l.meal-1]}</span>
+      <span class="text-white flex-1 mx-2">${l.skipped ? '⏭ 略過' : l.food.icon+' '+l.food.name+(l.usedVeggie?' + 🥦':'')}</span>
+      ${l.fatigue?'<span class="text-orange-400">疲勞</span>':'<span></span>'}
+      <span class="text-purple-400 font-bold w-14 text-right">心情${l.statsAfter?l.statsAfter.mood:'?'}%</span>
+    </div>`).join('');
+
+  // Food insights
+  const seenFoods = [...new Set(S.dayLogs.map(l=>l.food.id))];
+  $('food-insights').innerHTML = seenFoods.map(id=>{
+    const f = FOODS.find(x=>x.id===id);
+    return f ? `<p class="mb-2"><span class="text-orange-400 font-bold">${f.icon} ${f.name}：</span>${f.insight}</p>` : '';
+  }).join('');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+$('start-btn').onclick = () => {
+  S = defaultState();
+  showScreen('shop-screen');
+  buildShopCards();
+};
+
+$('shop-done-btn').onclick = shopDone;
+
+$('reset-btn').onclick = () => {
+  S = defaultState();
+  document.body.classList.remove('warm-mode');
+  showScreen('intro-screen');
+};
+</script>
+</body>
+</html>
