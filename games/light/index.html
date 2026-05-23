@@ -345,6 +345,7 @@ function renderSpeedStars(n,ss){return`<div class="spd-lbl">你的速度</div><d
 function lightX(){if(G.light==='lantern')return G.lanternX;const L=LIGHTS[G.light||'flashlight'];return L.fixed?g('cv').width/2:G.tx}
 function lightY(){if(G.light==='lantern')return G.lanternY;const L=LIGHTS[G.light||'flashlight'];return L.fixed?g('cv').height/2:G.ty-YOFF}
 function isLightOn(){
+  if(G.lanternPrePlace)return false;
   const L=LIGHTS[G.light||'flashlight'];
   if(L.fixed)return true;
   if(!L.alwaysOn)return G.fingerDown; // flashlight: only on when touching
