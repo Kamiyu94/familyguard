@@ -390,7 +390,7 @@ function loadScenario(n){
   else buildS3(W,H);
 
   // Lantern S1: start in pre-placement darkness
-  G.lanternPrePlace=(G.light==='lantern'&&n===1);
+  G.lanternPrePlace=(G.light==='lantern'&&(n===1||n===3));
   if(G.lanternPrePlace)g('scene').classList.add('pre-place');
   else g('scene').classList.remove('pre-place');
 
@@ -403,7 +403,7 @@ function loadScenario(n){
   const instrs=[null,
     isLantern?'選好位置　放下露營燈開始搜索！':L.alwaysOn?'移動光源　找到背包就點擊！':'用手指拖動　手指離開燈就滅！',
     isLantern?'拖動露營燈照傷口　放開後等5秒才能再移':L.alwaysOn?'移動光源照傷口　點擊傷口包紮！':'⚠️ 手指一離開螢幕燈就滅！',
-    isLantern?'拖動露營燈照到家人　放開後等5秒才能再移':'用光照到家人　他們就會走向集合點',
+    isLantern?'選好位置　放下露營燈召集家人！':'用光照到家人　他們就會走向集合點',
   ];
   g('instr').textContent=instrs[n];
 
@@ -539,10 +539,11 @@ function animPersons(){
   const L=LIGHTS[G.light];
   const cx=lightX(),cy=lightY();
   const lit=isLightOn();
+  const isDragging=G.light==='lantern'&&G.fingerDown&&!G.lanternPrePlace&&performance.now()>=G.lanternCooldownEnd;
   const SPEED=60;
   G.persons.forEach(p=>{
     if(p.done)return;
-    const inLight=lit&&Math.sqrt((p.x-cx)**2+(p.y-cy)**2)<L.r;
+    const inLight=!isDragging&&lit&&Math.sqrt((p.x-cx)**2+(p.y-cy)**2)<L.r;
     p.el.classList.toggle('lit',inLight);
     if(!inLight)return;
     const tx=G.goalX-p.x,ty=G.goalY-p.y;
@@ -598,10 +599,21 @@ function drawLoop(){
     G.rafId=requestAnimationFrame(drawLoop);return;
   }
 
+  // Lantern drag: near-total darkness with tiny soft glow at finger
+  if(G.light==='lantern'&&G.fingerDown&&!G.lanternPrePlace&&performance.now()>=G.lanternCooldownEnd){
+    ctx.fillStyle='rgba(0,0,0,.97)';ctx.fillRect(0,0,W,H);
+    ctx.save();ctx.globalCompositeOperation='destination-out';
+    const fg=ctx.createRadialGradient(cx,cy,0,cx,cy,60);
+    fg.addColorStop(0,'rgba(0,0,0,.35)');fg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=fg;ctx.fillRect(0,0,W,H);
+    ctx.restore();
+    document.querySelectorAll('.obj').forEach(o=>o.classList.remove('lit'));
+    G.rafId=requestAnimationFrame(drawLoop);return;
+  }
+
   if(!on){
     // Flashlight off: complete darkness
     ctx.fillStyle='rgba(0,0,0,.995)';ctx.fillRect(0,0,W,H);
-    // update lit class (all dark)
     document.querySelectorAll('.obj').forEach(o=>o.classList.remove('lit'));
     G.rafId=requestAnimationFrame(drawLoop);return;
   }
