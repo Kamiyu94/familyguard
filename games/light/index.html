@@ -390,7 +390,7 @@ function loadScenario(n){
   else buildS3(W,H);
 
   // Lantern S1: start in pre-placement darkness
-  G.lanternPrePlace=(G.light==='lantern'&&(n===1||n===3));
+  G.lanternPrePlace=(G.light==='lantern');
   if(G.lanternPrePlace)g('scene').classList.add('pre-place');
   else g('scene').classList.remove('pre-place');
 
@@ -401,9 +401,9 @@ function loadScenario(n){
 
   const isLantern=G.light==='lantern';
   const instrs=[null,
-    isLantern?'選好位置　放下露營燈開始搜索！':L.alwaysOn?'移動光源　找到背包就點擊！':'用手指拖動　手指離開燈就滅！',
-    isLantern?'拖動露營燈照傷口　放開後等5秒才能再移':L.alwaysOn?'移動光源照傷口　點擊傷口包紮！':'⚠️ 手指一離開螢幕燈就滅！',
-    isLantern?'選好位置　放下露營燈召集家人！':'用光照到家人　他們就會走向集合點',
+    isLantern?'拖動手指選位置　放開手指放下露營燈！':L.alwaysOn?'移動光源　找到背包就點擊！':'用手指拖動　手指離開燈就滅！',
+    isLantern?'拖動手指選位置　放開手指放下露營燈！':L.alwaysOn?'移動光源照傷口　點擊傷口包紮！':'⚠️ 手指一離開螢幕燈就滅！',
+    isLantern?'拖動手指選位置　放開手指放下露營燈！':'用光照到家人　他們就會走向集合點',
   ];
   g('instr').textContent=instrs[n];
 
@@ -414,9 +414,9 @@ function loadScenario(n){
   const icons=['','🎒','🩹','👨‍👩‍👧‍👦'];
   const ttls=['','找出逃生背包！','幫家人包紮傷口！','召集全家人！'];
   const bodies=[null,
-    G.light==='lantern'?'停電了！一片黑暗。\n先選好位置，放下露營燈，\n再開始搜索逃生背包！':'停電了！黑暗中藏著一個逃生背包。\n用手指移動光源，仔細搜索。\n找到背包就點擊它！',
-    '家人受傷了，身上有5個傷口。\n把光照到發紅的傷口，然後點擊它包紮。\n包紮完才出現下一個傷口！',
-    '家人分散在黑暗中。\n用光照到他們，他們就會走向\n中央的安全集合點！',
+    G.light==='lantern'?'停電了！一片黑暗。\n拖動手指選位置，放下露營燈，\n再開始搜索逃生背包！':'停電了！黑暗中藏著一個逃生背包。\n用手指移動光源，仔細搜索。\n找到背包就點擊它！',
+    G.light==='lantern'?'家人受傷了！\n拖動手指選位置，放下露營燈，\n再點擊傷口包紮。包紮完才出現下一個！':'家人受傷了，身上有5個傷口。\n把光照到發紅的傷口，然後點擊它包紮。\n包紮完才出現下一個傷口！',
+    G.light==='lantern'?'家人分散在黑暗中！\n拖動手指選位置，放下露營燈，\n家人看到光就會走向集合點！':'家人分散在黑暗中。\n用光照到他們，他們就會走向\n中央的安全集合點！',
   ];
   g('br-no').textContent=nos[n];
   g('br-icon').textContent=icons[n];
