@@ -242,6 +242,68 @@ const SCENARIOS = [
   },
 ];
 
+// ── Dynamic S5 variants ───────────────────────────────────────────────────
+const SCENARIO_5_ALT = {
+  badge: '第5關 · 守望',
+  icon: '🤝',
+  setting: '快到集合點了！路上遇到一位鄰居阿嬤，她一個人走路很吃力，喘著氣，找不到家人。',
+  question: '你怎麼做？',
+  choices: [
+    {
+      text: '🏃 先到集合點，請救援人員去幫她',
+      correct: false, victim: null, status: null,
+      consequence: '你趕到集合點，但現場混亂，救援人員全都忙著。等到有人去找她時，她已經跌倒在路邊了。',
+      lesson: '遇到需要幫助的弱勢者，能做到的事不要推給別人。當下伸出援手最有效！',
+    },
+    {
+      text: '🤝 停下來，扶著她一起走到集合點',
+      correct: true, victim: null, status: null,
+      consequence: '',
+      lesson: '緊急時刻更需要互相幫助！多花幾分鐘扶一位老人，可能救了她的命。',
+    },
+    {
+      text: '🛑 告訴她在原地等，說有人會來幫她',
+      correct: false, victim: null, status: null,
+      consequence: '你繼續前進，但混亂中沒有人注意到她。她在原地等了很久，越來越虛弱。',
+      lesson: '「有人會來」是最不可靠的假設！混亂中如果你不幫，很可能沒有人幫。',
+    },
+  ],
+};
+
+const SCENARIO_5_NO_DAD = {
+  badge: '第5關 · 團結',
+  icon: '👵',
+  setting: '快到集合點了！但奶奶走得越來越慢，已經落後一大段。前方路有點複雜。',
+  question: '你怎麼做？',
+  choices: [
+    {
+      text: '🏃 先跑去集合點，叫奶奶跟上來',
+      correct: false, victim: 'gma', status: 'separated',
+      consequence: '奶奶在複雜的路上迷路了，找不到集合點。大家找了好久才找到她。',
+      lesson: '老人和小孩是最需要幫助的人，絕不能讓他們單獨行動！',
+    },
+    {
+      text: '💪 你自己背起奶奶，快步走到集合點',
+      correct: true, victim: null, status: null,
+      consequence: '',
+      lesson: '全家一起行動，沒有人可以被落下。爸爸不在，你就是那個需要扛起責任的人！',
+    },
+    {
+      text: '📣 大聲呼叫爸爸來背奶奶',
+      correct: false, victim: 'gma', status: 'separated',
+      consequence: '你才想起——爸爸已經不在你們身邊了。等待中奶奶越來越落後，最後走散了。',
+      lesson: '每個逃生決定都會影響後面的處境！因為之前的選擇，現在能幫奶奶的只剩你了。',
+    },
+  ],
+};
+
+function getScenario(round) {
+  if (round !== 4) return SCENARIOS[round];
+  if (S.family['gma'] !== 'safe') return SCENARIO_5_ALT;
+  if (S.family['dad'] !== 'safe') return SCENARIO_5_NO_DAD;
+  return SCENARIOS[4];
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 let S = {};
 function initState() {
@@ -285,7 +347,7 @@ function renderHeader() {
 
 // ── Render Scenario ───────────────────────────────────────────────────────
 function render() {
-  const sc = SCENARIOS[S.round];
+  const sc = getScenario(S.round);
   S.answered = false;
   S.shuffled = shuffle(sc.choices.map((c, i) => ({ ...c, origIdx: i })));
   renderHeader();
@@ -406,7 +468,8 @@ function showResult() {
        </div>`
     : '';
 
-  const lessonsHtml = SCENARIOS.map(sc => {
+  const lessonsHtml = SCENARIOS.map((_, i) => {
+    const sc = getScenario(i);
     const correct = sc.choices.find(c => c.correct);
     return `<div class="mb-4 pb-4 border-b border-gray-700 last:border-0">
       <div class="text-amber-400 font-bold text-sm mb-1">${sc.badge}</div>
